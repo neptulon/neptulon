@@ -10,7 +10,8 @@ import (
 
 // App is a Neptulon JSON-RPC app.
 type App struct {
-	middleware []func(conn *neptulon.Conn, msg *Message) (result interface{}, resErr *ResError)
+	inMiddleware []func(conn *neptulon.Conn, msg *Message) (result interface{}, resErr *ResError)
+	// outMiddleware []func(conn *neptulon.Conn, msg *Message)
 }
 
 // NewApp creates a Neptulon JSON-RPC app.
@@ -22,7 +23,7 @@ func NewApp(n *neptulon.App) (*App, error) {
 
 // Middleware registers a new middleware to handle incoming messages.
 func (a *App) Middleware(middleware func(conn *neptulon.Conn, msg *Message) (result interface{}, resErr *ResError)) {
-	a.middleware = append(a.middleware, middleware)
+	a.inMiddleware = append(a.inMiddleware, middleware)
 }
 
 func (a *App) neptulonMiddleware(conn *neptulon.Conn, msg []byte) []byte {
@@ -31,7 +32,7 @@ func (a *App) neptulonMiddleware(conn *neptulon.Conn, msg []byte) []byte {
 		log.Fatalln("Cannot deserialize incoming message:", err)
 	}
 
-	for _, mid := range a.middleware {
+	for _, mid := range a.inMiddleware {
 		res, resErr := mid(conn, &m)
 		if res == nil && resErr == nil {
 			continue
