@@ -4,9 +4,16 @@ import "github.com/nbusy/neptulon"
 
 // Sender is a JSON-RPC request/notification sending middleware.
 type Sender struct {
-	routes map[string]func(conn *neptulon.Conn, msg *Message)
+	pendinRequests map[string]bool
 }
 
-func (s *Sender) middleware(conn *neptulon.Conn, msg *Message) {
-	s.routes[msg.Method](conn, msg)
+func (s *Sender) Request(req *Request) {
+	s.pendinRequests[req.ID] = true
+}
+
+func (s *Sender) middleware(conn *neptulon.Conn, res *Response) {
+	if s.pendinRequests[res.ID] {
+		// ...
+		delete(s.pendinRequests, res.ID)
+	}
 }
