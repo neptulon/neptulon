@@ -1,6 +1,11 @@
 package jsonrpc
 
-import "github.com/nbusy/neptulon"
+import (
+	"encoding/json"
+	"log"
+
+	"github.com/nbusy/neptulon"
+)
 
 // Sender is a JSON-RPC request/notification sending middleware.
 type Sender struct {
@@ -19,6 +24,16 @@ func NewSender(app *App) (*Sender, error) {
 
 // Request sends a JSON-RPC request throught the connection denoted by the session ID.
 func (s *Sender) Request(sessionID string, req *Request) chan<- *Response {
+	data, err := json.Marshal(req)
+	if err != nil {
+		log.Fatalln("Cannot serialize outgoing request:", err)
+	}
+
+	_, err = conn.Write(data) // todo: delegate serialization to jsonrpc app which should delegate writing to neptulon app
+	if err != nil {
+		log.Fatalln("Errored while writing response to connection:", err)
+	}
+
 	ch := make(chan *Response)
 	s.pendinRequests[req.ID] = ch
 	return ch
