@@ -4,16 +4,36 @@ import "github.com/nbusy/neptulon"
 
 // Sender is a JSON-RPC request/notification sending middleware.
 type Sender struct {
-	pendinRequests map[string]bool
+	pendinRequests map[string]chan *Response
 }
 
-func (s *Sender) Request(req *Request) {
-	s.pendinRequests[req.ID] = true
-}
-
-func (s *Sender) middleware(conn *neptulon.Conn, res *Response) {
-	if s.pendinRequests[res.ID] {
-		// ...
-		delete(s.pendinRequests, res.ID)
+// NewSender creates a JSON-RPC sender instance and registers it with the Neptulon JSON-RPC app.
+func NewSender(app *App) (*Sender, error) {
+	s := Sender{
+		pendinRequests: make(map[string]chan *Response),
 	}
+
+	app.Middleware(s.middleware)
+	return &s, nil
+}
+
+// Request sends a JSON-RPC request throught the connection denoted by the session ID.
+func (s *Sender) Request(sessionID string, req *Request) chan<- *Response {
+	ch := make(chan *Response)
+	s.pendinRequests[req.ID] = ch
+	return ch
+}
+
+// Notification sends a JSON-RPC notification throught the connection denoted by the session ID.
+func (s *Sender) Notification(sessionID string, not *Notification) {
+
+}
+
+func (s *Sender) middleware(conn *neptulon.Conn, msg *Message) (result interface{}, resErr *ResError) {
+	if ch, ok := s.pendinRequests[msg.ID]; ok {
+		ch <- &Response{ID: msg.ID, Result: msg.Result, Error: msg.Error}
+		delete(s.pendinRequests, msg.ID)
+	}
+
+	return nil, nil
 }
