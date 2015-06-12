@@ -4,11 +4,15 @@ import "sync"
 
 // Session is a session data store for connections.
 type Session struct {
-	ID           string // Auto generated session ID
 	error        error
 	disconnected bool
 	data         map[string]interface{}
 	mutex        sync.RWMutex
+}
+
+// NewSession creates and returns a new session object.
+func NewSession() *Session {
+	return &Session{data: make(map[string]interface{})}
 }
 
 // Set stores a value for a given key in the session. This method is thread safe.
