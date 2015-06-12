@@ -27,9 +27,9 @@ func (s *Sender) Request(connID string, req *Request) chan<- *Response {
 	return ch
 }
 
-// Notification sends a JSON-RPC notification throught the connection denoted by the session ID.
-func (s *Sender) Notification(sessionID string, not *Notification) {
-
+// Notification sends a JSON-RPC notification throught the connection denoted by the connection ID.
+func (s *Sender) Notification(connID string, not *Notification) {
+	s.jsonrpc.Send(connID, not)
 }
 
 func (s *Sender) middleware(conn *neptulon.Conn, msg *Message) (result interface{}, resErr *ResError) {
