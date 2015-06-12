@@ -12,9 +12,9 @@ type Client struct {
 	conn *neptulon.Conn
 }
 
-// NewClient creates a new client connection to a given network address with optional root CA and/or a client certificate (PEM encoded X.509 cert/key).
+// Dial creates a new client connection to a given network address with optional root CA and/or a client certificate (PEM encoded X.509 cert/key).
 // Debug mode logs all raw TCP communication.
-func NewClient(addr string, rootCA []byte, clientCert []byte, clientCertKey []byte, debug bool) (*Client, error) {
+func Dial(addr string, rootCA []byte, clientCert []byte, clientCertKey []byte, debug bool) (*Client, error) {
 	c, err := neptulon.Dial(addr, rootCA, clientCert, clientCertKey, debug)
 	if err != nil {
 		return nil, err
@@ -23,7 +23,7 @@ func NewClient(addr string, rootCA []byte, clientCert []byte, clientCertKey []by
 	return &Client{conn: c}, nil
 }
 
-// ReadMsg reads a message off of a client connection and returns a Message object.
+// ReadMsg reads a message off of a client connection and returns a JSON-RPC Message object.
 func (c *Client) ReadMsg() (*Message, error) {
 	_, data, err := c.conn.Read()
 	if err != nil {
@@ -50,4 +50,9 @@ func (c *Client) WriteMsg(msg interface{}) error {
 	}
 
 	return nil
+}
+
+// Close closes a client connection.
+func (c *Client) Close() error {
+	return c.conn.Close()
 }
