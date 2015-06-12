@@ -25,7 +25,7 @@ func NewClient(addr string, rootCA []byte, clientCert []byte, clientCertKey []by
 
 // ReadMsg reads a message off of a client connection and returns a Message object.
 func (c *Client) ReadMsg() (*Message, error) {
-	n, data, err := c.conn.Read()
+	_, data, err := c.conn.Read()
 	if err != nil {
 		return nil, err
 	}
@@ -36,4 +36,18 @@ func (c *Client) ReadMsg() (*Message, error) {
 	}
 
 	return &msg, nil
+}
+
+// WriteMsg writes a message to a client connection with error checking.
+func (c *Client) WriteMsg(msg interface{}) error {
+	data, err := json.Marshal(msg)
+	if err != nil {
+		return err
+	}
+
+	if _, err := c.conn.Write(data); err != nil {
+		return err
+	}
+
+	return nil
 }
