@@ -52,6 +52,12 @@ func (a *App) Run() error {
 	return err
 }
 
+// Send sends a message throught the connection denoted by the connection ID.
+func (a *App) Send(connID string, msg []byte) error {
+	_, err := a.conns[connID].Write(msg)
+	return err
+}
+
 // Stop stops a server instance.
 func (a *App) Stop() error {
 	err := a.listener.Close()
@@ -78,7 +84,7 @@ func (a *App) Stop() error {
 func handleConn(a *App) func(conn *Conn) {
 	return func(conn *Conn) {
 		a.connMutex.Lock()
-		a.conns[conn.Session.ID] = conn
+		a.conns[conn.ID] = conn
 		a.connMutex.Unlock()
 	}
 }
@@ -103,7 +109,7 @@ func handleMsg(a *App) func(conn *Conn, msg []byte) {
 func handleDisconn(a *App) func(conn *Conn) {
 	return func(conn *Conn) {
 		a.connMutex.Lock()
-		delete(a.conns, conn.Session.ID)
+		delete(a.conns, conn.ID)
 		a.connMutex.Unlock()
 	}
 }
