@@ -38,7 +38,17 @@ func (c *Client) ReadMsg() (*Message, error) {
 	return &msg, nil
 }
 
-// WriteMsg writes a message to a client connection with error checking.
+// WriteRequest writes a JSON-RPC request to a client connection with structured params object and auto generated request ID.
+func (c *Client) WriteRequest(method string, params struct{}) (reqID string, err error) {
+	id, err := neptulon.GenUID()
+	if err != nil {
+		return "", err
+	}
+
+	return id, c.WriteMsg(Request{ID: id, Method: method, Params: params})
+}
+
+// WriteMsg writes any JSON-RPC message to a client connection.
 func (c *Client) WriteMsg(msg interface{}) error {
 	data, err := json.Marshal(msg)
 	if err != nil {

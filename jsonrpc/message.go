@@ -15,15 +15,15 @@ type Message struct {
 
 // Request is a JSON-RPC request object.
 type Request struct {
-	ID     string          `json:"id"`
-	Method string          `json:"method"`
-	Params json.RawMessage `json:"params,omitempty"`
+	ID     string      `json:"id"`
+	Method string      `json:"method"`
+	Params interface{} `json:"params,omitempty"`
 }
 
 // Notification is a JSON-RPC notification object.
 type Notification struct {
-	Method string          `json:"method"`
-	Params json.RawMessage `json:"params,omitempty"`
+	Method string      `json:"method"`
+	Params interface{} `json:"params,omitempty"`
 }
 
 // Response is a JSON-RPC response object.

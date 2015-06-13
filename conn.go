@@ -36,7 +36,7 @@ func NewConn(conn *tls.Conn, headerSize, maxMsgSize, readWriteDeadline int, debu
 		readWriteDeadline = 300
 	}
 
-	id, err := getID()
+	id, err := GenUID()
 	if err != nil {
 		return nil, err
 	}
