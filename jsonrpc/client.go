@@ -48,7 +48,7 @@ func (c *Client) WriteRequest(method string, params interface{}) (reqID string, 
 	return id, c.WriteMsg(Request{ID: id, Method: method, Params: params})
 }
 
-// WriteRequestArr writes a JSON-RPC request to a client connection with array params object and auto generated request ID.
+// WriteRequestArr writes a JSON-RPC request to a client connection with array params and auto generated request ID.
 func (c *Client) WriteRequestArr(method string, params ...interface{}) (reqID string, err error) {
 	id, err := neptulon.GenUID()
 	if err != nil {
