@@ -39,7 +39,7 @@ func (c *Client) ReadMsg() (*Message, error) {
 }
 
 // WriteRequest writes a JSON-RPC request to a client connection with structured params object and auto generated request ID.
-func (c *Client) WriteRequest(method string, params struct{}) (reqID string, err error) {
+func (c *Client) WriteRequest(method string, params interface{}) (reqID string, err error) {
 	id, err := neptulon.GenUID()
 	if err != nil {
 		return "", err
