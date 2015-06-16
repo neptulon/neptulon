@@ -20,9 +20,9 @@ func TestRandString(t *testing.T) {
 	}
 }
 
-func TestGetID(t *testing.T) {
+func TestGenUID(t *testing.T) {
 	for i := 0; i < 50; i++ {
-		id, err := getID()
+		id, err := GenUID()
 
 		if err != nil {
 			t.Fatalf("Error while generating unique ID: %v", err)

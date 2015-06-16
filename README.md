@@ -10,7 +10,15 @@ Framework core is a small ~1000 SLOC codebase which makes it easy to fork, speci
 Example
 -------
 
-ToDo
+```go
+nep, _ := neptulon.NewApp(cert, privKey, "127.0.0.1:3000", true)
+jrpc, _ := jsonrpc.NewApp(nep)
+rout, _ := jsonrpc.NewRouter(jrpc)
+
+rout.Request("echo", func(conn *neptulon.Conn, req *jsonrpc.Request) (res interface{}, err *jsonrpc.ResError) {
+	return req.Params, nil
+})
+```
 
 Testing
 -------
