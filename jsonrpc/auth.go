@@ -1,6 +1,7 @@
 package jsonrpc
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"strconv"
@@ -18,16 +19,11 @@ func NewCertAuth(app *App) (*CertAuth, error) {
 }
 
 func (a *CertAuth) middleware(ctx *Context) {
-	if ctx.Conn.Session.Get("userid") != 0 {
+	if ctx.Conn.Session.Get("userid") != nil {
 		return
 	}
 
-	// possible responses:
-	// cert revoked
-	// cert expired
-	// cert invalid
-
-	// client certificate authorization: certificate is verified by the TLS listener instance so we trust it
+	// client certificate is verified by the TLS listener if provided by the client so the peerCerts list in the connection is trusted
 	peerCerts := ctx.Conn.ConnectionState().PeerCertificates
 	if len(peerCerts) > 0 {
 		idstr := peerCerts[0].Subject.CommonName
@@ -40,4 +36,8 @@ func (a *CertAuth) middleware(ctx *Context) {
 		log.Printf("Client connected with client certificate subject: %+v", peerCerts[0].Subject)
 		ctx.Conn.Session.Set("userid", userID)
 	}
+
+	ctx.Conn.Session.Set("error", errors.New("Invalid client certificate."))
+	ctx.ResErr = &ResError{Code: 666, Message: "Invalid client certificate.", Data: peerCerts}
+	// todo: ctx.CloseConn(Error{....})
 }

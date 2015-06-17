@@ -9,6 +9,7 @@ type Context struct {
 	Res     interface{}
 	ResErr  *ResError
 	handled bool
+	err     error // returns error to user (if not empty) and closes conn
 }
 
 // ReqContext encapsulates connection, request, and reponse objects for a JSON-RPC request.
@@ -18,6 +19,7 @@ type ReqContext struct {
 	Res     interface{}
 	ResErr  *ResError
 	handled bool
+	err     error // returns error to user (if not empty) and closes conn
 }
 
 // // Res returns the response object if it was set.
@@ -45,4 +47,5 @@ type NotContext struct {
 	conn    *neptulon.Conn
 	not     *Notification
 	handled bool
+	err     error // returns error to user (if not empty) and closes conn
 }
