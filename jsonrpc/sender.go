@@ -1,7 +1,5 @@
 package jsonrpc
 
-import "github.com/nbusy/neptulon"
-
 // Sender is a JSON-RPC request/notification sending middleware.
 type Sender struct {
 	jsonrpc        *App
@@ -32,11 +30,9 @@ func (s *Sender) Notification(connID string, not *Notification) {
 	s.jsonrpc.Send(connID, not)
 }
 
-func (s *Sender) middleware(conn *neptulon.Conn, msg *Message) (result interface{}, resErr *ResError) {
-	if ch, ok := s.pendinRequests[msg.ID]; ok {
-		ch <- &Response{ID: msg.ID, Result: msg.Result, Error: msg.Error}
-		delete(s.pendinRequests, msg.ID)
+func (s *Sender) middleware(ctx *Context) {
+	if ch, ok := s.pendinRequests[ctx.Msg.ID]; ok {
+		ch <- &Response{ID: ctx.Msg.ID, Result: ctx.Msg.Result, Error: ctx.Msg.Error}
+		delete(s.pendinRequests, ctx.Msg.ID)
 	}
-
-	return nil, nil
 }

@@ -1,7 +1,5 @@
 package jsonrpc
 
-import "github.com/nbusy/neptulon"
-
 // Router is a JSON-RPC request routing middleware.
 type Router struct {
 	requestRoutes      map[string]func(ctx *ReqContext)
@@ -29,27 +27,25 @@ func (r *Router) Notification(route string, handler func(ctx *NotContext)) {
 	r.notificationRoutes[route] = handler
 }
 
-func (r *Router) middleware(conn *neptulon.Conn, msg *Message) (result interface{}, err *ResError) {
+func (r *Router) middleware(ctx *Context) {
 	// if not request or notification don't handle it
-	if msg.Method == "" {
-		return nil, nil
+	if ctx.Msg.Method == "" {
+		return
 	}
 
 	// if request
-	if msg.ID != "" {
-		if handler, ok := r.requestRoutes[msg.Method]; ok {
-			ctx := ReqContext{Conn: conn, Req: &Request{ID: msg.ID, Method: msg.Method, Params: msg.Params}}
-			if handler(&ctx); ctx.Res != nil || ctx.ResErr != nil {
-				return ctx.Res, ctx.ResErr
+	if ctx.Msg.ID != "" {
+		if handler, ok := r.requestRoutes[ctx.Msg.Method]; ok {
+			rctx := ReqContext{Conn: ctx.Conn, Req: &Request{ID: ctx.Msg.ID, Method: ctx.Msg.Method, Params: ctx.Msg.Params}}
+			if handler(&rctx); rctx.Res != nil || rctx.ResErr != nil {
+				ctx.Res = rctx.Res
+				ctx.ResErr = rctx.ResErr
 			}
 		}
 	} else { // if notification
-		if handler, ok := r.notificationRoutes[msg.Method]; ok {
-			ctx := NotContext{conn: conn, not: &Notification{Method: msg.Method, Params: msg.Params}}
+		if handler, ok := r.notificationRoutes[ctx.Msg.Method]; ok {
+			ctx := NotContext{conn: ctx.Conn, not: &Notification{Method: ctx.Msg.Method, Params: ctx.Msg.Params}}
 			handler(&ctx)
-			// todo: need to return something to prevent deeper handlers to further handle this request (i.e. not found handler logging not found warning)
 		}
 	}
-
-	return nil, nil
 }
