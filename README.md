@@ -15,8 +15,8 @@ nep, _ := neptulon.NewApp(cert, privKey, "127.0.0.1:3000", true)
 jrpc, _ := jsonrpc.NewApp(nep)
 rout, _ := jsonrpc.NewRouter(jrpc)
 
-rout.Request("echo", func(conn *neptulon.Conn, req *jsonrpc.Request) (res interface{}, err *jsonrpc.ResError) {
-	return req.Params, nil
+rout.Request("echo", func(ctx *jsonrpc.ReqContext) {
+	ctx.Res = ctx.Req.Params
 })
 ```
 
