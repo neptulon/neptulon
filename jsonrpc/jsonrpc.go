@@ -11,7 +11,7 @@ import (
 // App is a Neptulon JSON-RPC app.
 type App struct {
 	neptulon   *neptulon.App
-	middleware []func(conn *neptulon.Conn, msg *Message) (result interface{}, resErr *ResError)
+	middleware []func(ctx *Context)
 }
 
 // NewApp creates a Neptulon JSON-RPC app.
@@ -22,7 +22,7 @@ func NewApp(n *neptulon.App) (*App, error) {
 }
 
 // Middleware registers a new middleware to handle incoming messages.
-func (a *App) Middleware(middleware func(conn *neptulon.Conn, msg *Message) (result interface{}, resErr *ResError)) {
+func (a *App) Middleware(middleware func(ctx *Context)) {
 	a.middleware = append(a.middleware, middleware)
 }
 
@@ -46,8 +46,9 @@ func (a *App) neptulonMiddleware(conn *neptulon.Conn, msg []byte) []byte {
 	}
 
 	for _, mid := range a.middleware {
-		res, resErr := mid(conn, &m)
-		if res == nil && resErr == nil {
+		ctx := Context{Conn: conn, Msg: &m}
+		mid(&ctx)
+		if ctx.Res == nil && ctx.ResErr == nil {
 			continue
 		}
 
@@ -55,7 +56,7 @@ func (a *App) neptulonMiddleware(conn *neptulon.Conn, msg []byte) []byte {
 			log.Fatalln("Cannot return a response to a non request")
 		}
 
-		data, err := json.Marshal(Response{ID: m.ID, Result: res, Error: resErr})
+		data, err := json.Marshal(Response{ID: m.ID, Result: ctx.Res, Error: ctx.ResErr})
 		if err != nil {
 			log.Fatalln("Errored while serializing JSON-RPC response:", err)
 		}

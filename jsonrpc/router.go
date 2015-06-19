@@ -1,18 +1,16 @@
 package jsonrpc
 
-import "github.com/nbusy/neptulon"
-
 // Router is a JSON-RPC request routing middleware.
 type Router struct {
-	requestRoutes      map[string]func(conn *neptulon.Conn, req *Request) (result interface{}, err *ResError)
-	notificationRoutes map[string]func(conn *neptulon.Conn, not *Notification)
+	requestRoutes      map[string]func(ctx *ReqContext)
+	notificationRoutes map[string]func(ctx *NotContext)
 }
 
 // NewRouter creates a JSON-RPC router instance and registers it with the Neptulon JSON-RPC app.
 func NewRouter(app *App) (*Router, error) {
 	r := Router{
-		requestRoutes:      make(map[string]func(conn *neptulon.Conn, req *Request) (result interface{}, err *ResError)),
-		notificationRoutes: make(map[string]func(conn *neptulon.Conn, not *Notification)),
+		requestRoutes:      make(map[string]func(ctx *ReqContext)),
+		notificationRoutes: make(map[string]func(ctx *NotContext)),
 	}
 
 	app.Middleware(r.middleware)
@@ -20,34 +18,34 @@ func NewRouter(app *App) (*Router, error) {
 }
 
 // Request adds a new request route registry.
-func (r *Router) Request(route string, handler func(conn *neptulon.Conn, req *Request) (result interface{}, err *ResError)) {
+func (r *Router) Request(route string, handler func(ctx *ReqContext)) {
 	r.requestRoutes[route] = handler
 }
 
 // Notification adds a new notification route registry.
-func (r *Router) Notification(route string, handler func(conn *neptulon.Conn, not *Notification)) {
+func (r *Router) Notification(route string, handler func(ctx *NotContext)) {
 	r.notificationRoutes[route] = handler
 }
 
-func (r *Router) middleware(conn *neptulon.Conn, msg *Message) (result interface{}, err *ResError) {
+func (r *Router) middleware(ctx *Context) {
 	// if not request or notification don't handle it
-	if msg.Method == "" {
-		return nil, nil
+	if ctx.Msg.Method == "" {
+		return
 	}
 
 	// if request
-	if msg.ID != "" {
-		if handler, ok := r.requestRoutes[msg.Method]; ok {
-			if res, resErr := handler(conn, &Request{ID: msg.ID, Method: msg.Method, Params: msg.Params}); res != nil || resErr != nil {
-				return res, resErr
+	if ctx.Msg.ID != "" {
+		if handler, ok := r.requestRoutes[ctx.Msg.Method]; ok {
+			rctx := ReqContext{Conn: ctx.Conn, Req: &Request{ID: ctx.Msg.ID, Method: ctx.Msg.Method, Params: ctx.Msg.Params}}
+			if handler(&rctx); rctx.Res != nil || rctx.ResErr != nil {
+				ctx.Res = rctx.Res
+				ctx.ResErr = rctx.ResErr
 			}
 		}
 	} else { // if notification
-		if handler, ok := r.notificationRoutes[msg.Method]; ok {
-			handler(conn, &Notification{Method: msg.Method, Params: msg.Params})
-			// todo: need to return something to prevent deeper handlers to further handle this request (i.e. not found handler logging not found warning)
+		if handler, ok := r.notificationRoutes[ctx.Msg.Method]; ok {
+			ctx := NotContext{conn: ctx.Conn, not: &Notification{Method: ctx.Msg.Method, Params: ctx.Msg.Params}}
+			handler(&ctx)
 		}
 	}
-
-	return nil, nil
 }
