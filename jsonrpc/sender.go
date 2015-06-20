@@ -31,8 +31,8 @@ func (s *Sender) Notification(connID string, not *Notification) {
 }
 
 func (s *Sender) middleware(ctx *Context) {
-	if ch, ok := s.pendinRequests[ctx.Msg.ID]; ok {
-		ch <- &Response{ID: ctx.Msg.ID, Result: ctx.Msg.Result, Error: ctx.Msg.Error}
-		delete(s.pendinRequests, ctx.Msg.ID)
+	if ch, ok := s.pendinRequests[ctx.InMsg.ID]; ok {
+		ch <- &Response{ID: ctx.InMsg.ID, Result: ctx.InMsg.Result, Error: ctx.InMsg.Error}
+		delete(s.pendinRequests, ctx.InMsg.ID)
 	}
 }

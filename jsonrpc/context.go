@@ -2,16 +2,16 @@ package jsonrpc
 
 import "github.com/nbusy/neptulon"
 
-// Context encapsulates connection and generic JSON-RPC incoming message and response objects.
+// Context encapsulates connection and incoming/outgoing message objects.
 type Context struct {
 	Conn    *neptulon.Conn
-	Msg     *Message
-	ResMsg  *Message
+	InMsg   *Message
+	OutMsg  *Message
 	handled bool
 	err     error // returns error to user (if not empty) and closes conn
 }
 
-// ReqContext encapsulates connection, request, and reponse objects for a JSON-RPC request.
+// ReqContext encapsulates connection, request, and reponse objects for a request.
 type ReqContext struct {
 	Conn    *neptulon.Conn
 	Req     *Request
@@ -41,7 +41,7 @@ type ReqContext struct {
 // 	return r.handled
 // }
 
-// NotContext encapsulates connection and notification objects for a JSON-RPC notification.
+// NotContext encapsulates connection and notification objects.
 type NotContext struct {
 	conn    *neptulon.Conn
 	not     *Notification

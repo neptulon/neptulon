@@ -29,21 +29,21 @@ func (r *Router) Notification(route string, handler func(ctx *NotContext)) {
 
 func (r *Router) middleware(ctx *Context) {
 	// if not request or notification don't handle it
-	if ctx.Msg.Method == "" {
+	if ctx.InMsg.Method == "" {
 		return
 	}
 
 	// if request
-	if ctx.Msg.ID != "" {
-		if handler, ok := r.requestRoutes[ctx.Msg.Method]; ok {
-			rctx := ReqContext{Conn: ctx.Conn, Req: &Request{ID: ctx.Msg.ID, Method: ctx.Msg.Method, Params: ctx.Msg.Params}}
+	if ctx.InMsg.ID != "" {
+		if handler, ok := r.requestRoutes[ctx.InMsg.Method]; ok {
+			rctx := ReqContext{Conn: ctx.Conn, Req: &Request{ID: ctx.InMsg.ID, Method: ctx.InMsg.Method, Params: ctx.InMsg.Params}}
 			if handler(&rctx); rctx.Res != nil || rctx.ResErr != nil {
-				ctx.ResMsg = &Message{Result: rctx.Res, Error: rctx.ResErr}
+				ctx.OutMsg = &Message{Result: rctx.Res, Error: rctx.ResErr}
 			}
 		}
 	} else { // if notification
-		if handler, ok := r.notificationRoutes[ctx.Msg.Method]; ok {
-			ctx := NotContext{conn: ctx.Conn, not: &Notification{Method: ctx.Msg.Method, Params: ctx.Msg.Params}}
+		if handler, ok := r.notificationRoutes[ctx.InMsg.Method]; ok {
+			ctx := NotContext{conn: ctx.Conn, not: &Notification{Method: ctx.InMsg.Method, Params: ctx.InMsg.Params}}
 			handler(&ctx)
 		}
 	}

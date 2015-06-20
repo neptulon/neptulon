@@ -24,7 +24,7 @@ func (a *CertAuth) middleware(ctx *Context) {
 	// if provided, client certificate is verified by the TLS listener so the peerCerts list in the connection is trusted
 	certs := ctx.Conn.ConnectionState().PeerCertificates
 	if len(certs) == 0 {
-		ctx.ResMsg = &Message{Error: &ResError{Code: 666, Message: "Invalid client certificate.", Data: certs}}
+		ctx.OutMsg = &Message{Error: &ResError{Code: 666, Message: "Invalid client certificate.", Data: certs}}
 		// todo: ctx.Send/Fin/Write/End()
 		ctx.Conn.Close()
 		return
@@ -33,7 +33,7 @@ func (a *CertAuth) middleware(ctx *Context) {
 	idstr := certs[0].Subject.CommonName
 	uid64, err := strconv.ParseUint(idstr, 10, 32)
 	if err != nil {
-		ctx.ResMsg = &Message{Error: &ResError{Code: 666, Message: "Invalid client certificate.", Data: certs}}
+		ctx.OutMsg = &Message{Error: &ResError{Code: 666, Message: "Invalid client certificate.", Data: certs}}
 		// todo: ctx.Send/Fin/Write/End()
 		ctx.Conn.Close()
 		return
