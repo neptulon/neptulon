@@ -48,7 +48,7 @@ func (a *App) neptulonMiddleware(conn *neptulon.Conn, msg []byte) []byte {
 	for _, mid := range a.middleware {
 		ctx := Context{Conn: conn, Msg: &m}
 		mid(&ctx)
-		if ctx.Res == nil && ctx.ResErr == nil {
+		if ctx.ResMsg.Result == nil && ctx.ResMsg.Error == nil {
 			continue
 		}
 
@@ -56,7 +56,7 @@ func (a *App) neptulonMiddleware(conn *neptulon.Conn, msg []byte) []byte {
 			log.Fatalln("Cannot return a response to a non request")
 		}
 
-		data, err := json.Marshal(Response{ID: m.ID, Result: ctx.Res, Error: ctx.ResErr})
+		data, err := json.Marshal(Response{ID: m.ID, Result: ctx.ResMsg.Result, Error: ctx.ResMsg.Error})
 		if err != nil {
 			log.Fatalln("Errored while serializing JSON-RPC response:", err)
 		}

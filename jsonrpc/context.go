@@ -6,8 +6,7 @@ import "github.com/nbusy/neptulon"
 type Context struct {
 	Conn    *neptulon.Conn
 	Msg     *Message
-	Res     interface{}
-	ResErr  *ResError
+	ResMsg  *Message
 	handled bool
 	err     error // returns error to user (if not empty) and closes conn
 }

@@ -38,8 +38,7 @@ func (r *Router) middleware(ctx *Context) {
 		if handler, ok := r.requestRoutes[ctx.Msg.Method]; ok {
 			rctx := ReqContext{Conn: ctx.Conn, Req: &Request{ID: ctx.Msg.ID, Method: ctx.Msg.Method, Params: ctx.Msg.Params}}
 			if handler(&rctx); rctx.Res != nil || rctx.ResErr != nil {
-				ctx.Res = rctx.Res
-				ctx.ResErr = rctx.ResErr
+				ctx.ResMsg = &Message{Result: rctx.Res, Error: rctx.ResErr}
 			}
 		}
 	} else { // if notification
