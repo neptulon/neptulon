@@ -1,7 +1,6 @@
 package jsonrpc
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"strconv"
@@ -23,21 +22,20 @@ func (a *CertAuth) middleware(ctx *Context) {
 		return
 	}
 
-	// client certificate is verified by the TLS listener if provided by the client so the peerCerts list in the connection is trusted
-	peerCerts := ctx.Conn.ConnectionState().PeerCertificates
-	if len(peerCerts) > 0 {
-		idstr := peerCerts[0].Subject.CommonName
-		uid64, err := strconv.ParseUint(idstr, 10, 32)
-		if err != nil {
-			ctx.Conn.Session.Set("error", fmt.Errorf("Cannot parse client message or method mismatched: %v", err))
-			return
-		}
-		userID := uint32(uid64)
-		log.Printf("Client connected with client certificate subject: %+v", peerCerts[0].Subject)
-		ctx.Conn.Session.Set("userid", userID)
+	// if provided, client certificate is verified by the TLS listener so the peerCerts list in the connection is trusted
+	certs := ctx.Conn.ConnectionState().PeerCertificates
+	if len(certs) == 0 {
+		ctx.ResErr = &ResError{Code: 666, Message: "Invalid client certificate.", Data: certs}
+		// todo: ctx.CloseConn(Error{....})
 	}
 
-	ctx.Conn.Session.Set("error", errors.New("Invalid client certificate."))
-	ctx.ResErr = &ResError{Code: 666, Message: "Invalid client certificate.", Data: peerCerts}
-	// todo: ctx.CloseConn(Error{....})
+	idstr := certs[0].Subject.CommonName
+	uid64, err := strconv.ParseUint(idstr, 10, 32)
+	if err != nil {
+		ctx.Conn.Session.Set("error", fmt.Errorf("Cannot parse client message or method mismatched: %v", err))
+		return
+	}
+	userID := uint32(uid64)
+	log.Println("Client connected with client certificate subject:", certs[0].Subject)
+	ctx.Conn.Session.Set("userid", userID)
 }
