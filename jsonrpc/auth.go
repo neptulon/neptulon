@@ -25,7 +25,7 @@ func (a *CertAuth) middleware(ctx *Context) {
 	certs := ctx.Conn.ConnectionState().PeerCertificates
 	if len(certs) == 0 {
 		ctx.ResMsg = &Message{Error: &ResError{Code: 666, Message: "Invalid client certificate.", Data: certs}}
-		// todo: ctx.Send().Close()
+		// todo: ctx.Send/Fin/Write/End()
 		ctx.Conn.Close()
 		return
 	}
@@ -34,7 +34,7 @@ func (a *CertAuth) middleware(ctx *Context) {
 	uid64, err := strconv.ParseUint(idstr, 10, 32)
 	if err != nil {
 		ctx.ResMsg = &Message{Error: &ResError{Code: 666, Message: "Invalid client certificate.", Data: certs}}
-		// todo: ctx.Send().Close()
+		// todo: ctx.Send/Fin/Write/End()
 		ctx.Conn.Close()
 		return
 	}
