@@ -30,3 +30,5 @@ func (a *CertAuth) reqMiddleware(ctx *ReqContext) {
 	ctx.Conn.Session.Set("userid", userID)
 	log.Println("Client-certificate authenticated:", ctx.Conn.RemoteAddr(), userID)
 }
+
+// todo: also check notification and response routes but how to streamline this? revive generic app.Middleware(ctx *Message) ???
