@@ -2,49 +2,40 @@ package jsonrpc
 
 // Router is a JSON-RPC request routing middleware.
 type Router struct {
-	requestRoutes      map[string]func(ctx *ReqContext)
-	notificationRoutes map[string]func(ctx *NotContext)
+	reqRoutes map[string]func(ctx *ReqContext)
+	notRoutes map[string]func(ctx *NotContext)
 }
 
 // NewRouter creates a JSON-RPC router instance and registers it with the Neptulon JSON-RPC app.
 func NewRouter(app *App) (*Router, error) {
 	r := Router{
-		requestRoutes:      make(map[string]func(ctx *ReqContext)),
-		notificationRoutes: make(map[string]func(ctx *NotContext)),
+		reqRoutes: make(map[string]func(ctx *ReqContext)),
+		notRoutes: make(map[string]func(ctx *NotContext)),
 	}
 
-	app.Middleware(r.middleware)
+	app.ReqMiddleware(r.reqMiddleware)
+	app.NotMiddleware(r.notMiddleware)
 	return &r, nil
 }
 
 // Request adds a new request route registry.
 func (r *Router) Request(route string, handler func(ctx *ReqContext)) {
-	r.requestRoutes[route] = handler
+	r.reqRoutes[route] = handler
 }
 
 // Notification adds a new notification route registry.
 func (r *Router) Notification(route string, handler func(ctx *NotContext)) {
-	r.notificationRoutes[route] = handler
+	r.notRoutes[route] = handler
 }
 
-func (r *Router) middleware(ctx *Context) {
-	// if not request or notification don't handle it
-	if ctx.InMsg.Method == "" {
-		return
+func (r *Router) reqMiddleware(ctx *ReqContext) {
+	if handler, ok := r.reqRoutes[ctx.Req.Method]; ok {
+		handler(ctx)
 	}
+}
 
-	// if request
-	if ctx.InMsg.ID != "" {
-		if handler, ok := r.requestRoutes[ctx.InMsg.Method]; ok {
-			rctx := ReqContext{Conn: ctx.Conn, Req: &Request{ID: ctx.InMsg.ID, Method: ctx.InMsg.Method, Params: ctx.InMsg.Params}}
-			if handler(&rctx); rctx.Res != nil || rctx.ResErr != nil {
-				ctx.OutMsg = &Message{Result: rctx.Res, Error: rctx.ResErr}
-			}
-		}
-	} else { // if notification
-		if handler, ok := r.notificationRoutes[ctx.InMsg.Method]; ok {
-			ctx := NotContext{conn: ctx.Conn, not: &Notification{Method: ctx.InMsg.Method, Params: ctx.InMsg.Params}}
-			handler(&ctx)
-		}
+func (r *Router) notMiddleware(ctx *NotContext) {
+	if handler, ok := r.notRoutes[ctx.Not.Method]; ok {
+		handler(ctx)
 	}
 }

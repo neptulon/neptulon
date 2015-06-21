@@ -43,8 +43,16 @@ type ReqContext struct {
 
 // NotContext encapsulates connection and notification objects.
 type NotContext struct {
-	conn    *neptulon.Conn
-	not     *Notification
+	Conn    *neptulon.Conn
+	Not     *Notification
+	handled bool
+	err     error // returns error to user (if not empty) and closes conn
+}
+
+// ResContext encapsulates connection and response objects.
+type ResContext struct {
+	Conn    *neptulon.Conn
+	Res     *Response
 	handled bool
 	err     error // returns error to user (if not empty) and closes conn
 }
