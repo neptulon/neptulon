@@ -26,6 +26,10 @@ func (a *CertAuth) middleware(ctx *Context) {
 		ctx.OutMsg = &Message{Error: &ResError{Code: 666, Message: "Invalid client certificate.", Data: certs}}
 		ctx.Conn.Close()
 		return
+
+		// ctx.Sender(...)
+		// ctx.Conn.Close()
+		// return
 	}
 
 	userID := certs[0].Subject.CommonName
