@@ -21,7 +21,7 @@ func (a *CertAuth) reqMiddleware(ctx *ReqContext) {
 	// if provided, client certificate is verified by the TLS listener so the peerCerts list in the connection is trusted
 	certs := ctx.Conn.ConnectionState().PeerCertificates
 	if len(certs) == 0 {
-		ctx.ResErr = &ResError{Code: 666, Message: "Invalid client certificate.", Data: certs}
+		ctx.ResErr = &ResError{Code: 666, Message: "Invalid client certificates.", Data: certs}
 		// todo: close conn
 		return
 	}

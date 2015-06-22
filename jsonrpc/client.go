@@ -2,6 +2,7 @@ package jsonrpc
 
 import (
 	"encoding/json"
+	"errors"
 
 	"github.com/nbusy/neptulon"
 )
@@ -23,19 +24,38 @@ func Dial(addr string, rootCA []byte, clientCert []byte, clientCertKey []byte, d
 	return &Client{conn: c}, nil
 }
 
-// ReadMsg reads a message off of a client connection and returns a JSON-RPC Message object.
-func (c *Client) ReadMsg() (*Message, error) {
+// ReadMsg reads a message off of a client connection and returns a request, response, or notification message depending on what server sent.
+func (c *Client) ReadMsg() (req *Request, res *Response, not *Notification, err error) {
 	_, data, err := c.conn.Read()
 	if err != nil {
-		return nil, err
+		return
 	}
 
-	var msg Message
+	var msg message
 	if err = json.Unmarshal(data, &msg); err != nil {
-		return nil, err
+		return
 	}
 
-	return &msg, nil
+	// if incoming message is a request or response
+	if msg.ID != "" {
+		// if incoming message is a request
+		if msg.Method != "" {
+			req = &Request{ID: msg.ID, Method: msg.Method, Params: msg.Params}
+			return
+		}
+
+		// if incoming message is a response
+		res = &Response{ID: msg.ID, Result: msg.Result, Error: msg.Error}
+		return
+	}
+
+	// if incoming message is a notification
+	if msg.Method != "" {
+		not = &Notification{Method: msg.Method, Params: msg.Params}
+	}
+
+	err = errors.New("Received a malformed message.")
+	return
 }
 
 // WriteRequest writes a JSON-RPC request to a client connection with structured params object and auto generated request ID.
