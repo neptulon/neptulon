@@ -75,6 +75,8 @@ func (a *App) neptulonMiddleware(conn *neptulon.Conn, msg []byte) []byte {
 
 				return data
 			}
+
+			return nil
 		}
 
 		// if incoming message is a response
@@ -82,6 +84,8 @@ func (a *App) neptulonMiddleware(conn *neptulon.Conn, msg []byte) []byte {
 		for _, mid := range a.resMiddleware {
 			mid(&ctx)
 		}
+
+		return nil
 	}
 
 	// if incoming message is a notification
@@ -90,10 +94,12 @@ func (a *App) neptulonMiddleware(conn *neptulon.Conn, msg []byte) []byte {
 		for _, mid := range a.notMiddleware {
 			mid(&ctx)
 		}
+
+		return nil
 	}
 
 	// if incoming message is none of the above
-	data, err := json.Marshal(Notification{Method: "system.invalid.message"})
+	data, err := json.Marshal(Notification{Method: "invalidMessage"})
 	if err != nil {
 		log.Fatalln("Errored while serializing JSON-RPC response:", err)
 	}
