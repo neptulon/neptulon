@@ -92,6 +92,7 @@ func (a *App) neptulonMiddleware(conn *neptulon.Conn, msg []byte) []byte {
 		}
 	}
 
+	// if incoming message is none of the above
 	data, err := json.Marshal(Notification{Method: "system.invalid.message"})
 	if err != nil {
 		log.Fatalln("Errored while serializing JSON-RPC response:", err)
