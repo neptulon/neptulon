@@ -24,6 +24,7 @@ func (a *CertAuth) reqMiddleware(ctx *ReqContext) {
 	certs := ctx.Conn.ConnectionState().PeerCertificates
 	if len(certs) == 0 {
 		log.Println("Invalid client-certificate authentication attempt:", ctx.Conn.RemoteAddr())
+		ctx.Done = true
 		ctx.Conn.Close()
 		return
 	}
@@ -38,6 +39,7 @@ func (a *CertAuth) resMiddleware(ctx *ResContext) {
 		return
 	}
 
+	ctx.Done = true
 	ctx.Conn.Close()
 }
 
@@ -46,5 +48,6 @@ func (a *CertAuth) notMiddleware(ctx *NotContext) {
 		return
 	}
 
+	ctx.Done = true
 	ctx.Conn.Close()
 }

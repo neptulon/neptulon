@@ -64,6 +64,9 @@ func (a *App) neptulonMiddleware(conn *neptulon.Conn, msg []byte) []byte {
 			ctx := ReqContext{Conn: conn, Req: &Request{ID: m.ID, Method: m.Method, Params: m.Params}}
 			for _, mid := range a.reqMiddleware {
 				mid(&ctx)
+				if ctx.Done {
+					break
+				}
 			}
 
 			if ctx.Res != nil || ctx.ResErr != nil {
@@ -82,6 +85,9 @@ func (a *App) neptulonMiddleware(conn *neptulon.Conn, msg []byte) []byte {
 		ctx := ResContext{Conn: conn, Res: &Response{ID: m.ID, Result: m.Result, Error: m.Error}}
 		for _, mid := range a.resMiddleware {
 			mid(&ctx)
+			if ctx.Done {
+				break
+			}
 		}
 
 		return nil
@@ -92,6 +98,9 @@ func (a *App) neptulonMiddleware(conn *neptulon.Conn, msg []byte) []byte {
 		ctx := NotContext{Conn: conn, Not: &Notification{Method: m.Method, Params: m.Params}}
 		for _, mid := range a.notMiddleware {
 			mid(&ctx)
+			if ctx.Done {
+				break
+			}
 		}
 
 		return nil
