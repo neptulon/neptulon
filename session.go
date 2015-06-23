@@ -4,10 +4,8 @@ import "sync"
 
 // Session is a thread-safe data store.
 type Session struct {
-	error        error
-	disconnected bool
-	data         map[string]interface{}
-	mutex        sync.RWMutex
+	data  map[string]interface{}
+	mutex sync.RWMutex
 }
 
 // NewSession creates and returns a new session object.

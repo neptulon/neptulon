@@ -12,8 +12,8 @@ Example
 
 ```go
 nep, _ := neptulon.NewApp(cert, privKey, "127.0.0.1:3000", true)
-jrpc, _ := jsonrpc.NewApp(nep)
-rout, _ := jsonrpc.NewRouter(jrpc)
+rpc, _ := jsonrpc.NewApp(nep)
+rout, _ := jsonrpc.NewRouter(rpc)
 
 rout.Request("echo", func(ctx *jsonrpc.ReqContext) {
 	ctx.Res = ctx.Req.Params

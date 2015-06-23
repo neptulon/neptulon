@@ -94,8 +94,8 @@ func handleClient(l *Listener, conn *Conn, handleConn func(conn *Conn), handleMs
 	handleConn(conn)
 
 	defer func() {
-		conn.Session.error = conn.Close() // todo: handle close error, store the error in conn object and return it to handleMsg/handleErr/handleDisconn or one level up (to server)
-		if conn.Session.disconnected {
+		conn.err = conn.Close() // todo: handle close error, store the error in conn object and return it to handleMsg/handleErr/handleDisconn or one level up (to server)
+		if conn.disconnected {
 			log.Println("Client disconnected:", conn.RemoteAddr())
 		} else {
 			log.Println("Closed client connection:", conn.RemoteAddr())
@@ -105,19 +105,18 @@ func handleClient(l *Listener, conn *Conn, handleConn func(conn *Conn), handleMs
 	}()
 
 	for {
-		if conn.Session.error != nil {
-			// todo: send error message to user, log the error, and close the conn and return
-			return conn.Session.error
+		if conn.err != nil {
+			return conn.err // todo: should we send error message to user, log the error, and close the conn and return instead?
 		}
 
 		n, msg, err := conn.Read()
 		if err != nil {
 			if err == io.EOF {
-				conn.Session.disconnected = true
+				conn.disconnected = true
 				break
 			}
 			if operr, ok := err.(*net.OpError); ok && operr.Op == "read" && operr.Err.Error() == "use of closed network connection" {
-				conn.Session.disconnected = true
+				conn.disconnected = true
 				break
 			}
 			log.Fatalln("Errored while reading:", err)
@@ -128,7 +127,7 @@ func handleClient(l *Listener, conn *Conn, handleConn func(conn *Conn), handleMs
 			continue // send back pong?
 		}
 		if n == 5 && bytes.Equal(msg, closed) {
-			return conn.Session.error
+			return conn.err
 		}
 
 		l.reqWG.Add(1)
@@ -138,7 +137,7 @@ func handleClient(l *Listener, conn *Conn, handleConn func(conn *Conn), handleMs
 		}()
 	}
 
-	return conn.Session.error
+	return conn.err
 }
 
 // Close closes the listener.

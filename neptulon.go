@@ -101,6 +101,7 @@ func handleMsg(a *App) func(conn *Conn, msg []byte) {
 			if err != nil {
 				log.Fatalln("Errored while writing response to connection:", err)
 			}
+
 			break
 		}
 	}
