@@ -24,7 +24,7 @@ func (a *CertAuth) reqMiddleware(ctx *ReqContext) {
 	certs := ctx.Conn.ConnectionState().PeerCertificates
 	if len(certs) == 0 {
 		ctx.ResErr = &ResError{Code: 666, Message: "Invalid client certificate.", Data: certs}
-		// ctx.Conn.Close()
+		ctx.Conn.Session.Set("close", true)
 		log.Println("Invalid client-certificate authentication attempt:", ctx.Conn.RemoteAddr())
 		return
 	}
