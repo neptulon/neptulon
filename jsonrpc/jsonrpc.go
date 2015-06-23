@@ -64,6 +64,9 @@ func (a *App) neptulonMiddleware(conn *neptulon.Conn, msg []byte) []byte {
 			ctx := ReqContext{Conn: conn, Req: &Request{ID: m.ID, Method: m.Method, Params: m.Params}}
 			for _, mid := range a.reqMiddleware {
 				mid(&ctx)
+				if ctx.Conn.Session.Get("close") == true {
+					break
+				}
 			}
 
 			if ctx.Res != nil || ctx.ResErr != nil {

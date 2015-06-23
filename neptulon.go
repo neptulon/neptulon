@@ -4,6 +4,7 @@ package neptulon
 import (
 	"log"
 	"sync"
+	"time"
 )
 
 // App is a Neptulon application.
@@ -93,15 +94,24 @@ func handleMsg(a *App) func(conn *Conn, msg []byte) {
 	return func(conn *Conn, msg []byte) {
 		for _, m := range a.middleware {
 			res := m(conn, msg)
-			if res == nil {
-				continue
+			if res != nil {
+				_, err := conn.Write(res)
+				if err != nil {
+					log.Fatalln("Errored while writing response to connection:", err)
+				}
+
+				if conn.Session.Get("close") == true {
+					time.Sleep(time.Second)
+					conn.Close()
+				}
+
+				break
 			}
 
-			_, err := conn.Write(res)
-			if err != nil {
-				log.Fatalln("Errored while writing response to connection:", err)
+			if conn.Session.Get("close") == true {
+				conn.Close()
+				break
 			}
-			break
 		}
 	}
 }
