@@ -19,7 +19,7 @@ type Conn struct {
 	headerSize        int
 	maxMsgSize        int
 	readWriteDeadline time.Duration
-	error             error
+	err               error
 	disconnected      bool
 	debug             bool
 }

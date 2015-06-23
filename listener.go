@@ -94,7 +94,7 @@ func handleClient(l *Listener, conn *Conn, handleConn func(conn *Conn), handleMs
 	handleConn(conn)
 
 	defer func() {
-		conn.error = conn.Close() // todo: handle close error, store the error in conn object and return it to handleMsg/handleErr/handleDisconn or one level up (to server)
+		conn.err = conn.Close() // todo: handle close error, store the error in conn object and return it to handleMsg/handleErr/handleDisconn or one level up (to server)
 		if conn.disconnected {
 			log.Println("Client disconnected:", conn.RemoteAddr())
 		} else {
@@ -105,8 +105,8 @@ func handleClient(l *Listener, conn *Conn, handleConn func(conn *Conn), handleMs
 	}()
 
 	for {
-		if conn.error != nil {
-			return conn.error // todo: should we send error message to user, log the error, and close the conn and return instead?
+		if conn.err != nil {
+			return conn.err // todo: should we send error message to user, log the error, and close the conn and return instead?
 		}
 
 		n, msg, err := conn.Read()
@@ -127,7 +127,7 @@ func handleClient(l *Listener, conn *Conn, handleConn func(conn *Conn), handleMs
 			continue // send back pong?
 		}
 		if n == 5 && bytes.Equal(msg, closed) {
-			return conn.error
+			return conn.err
 		}
 
 		l.reqWG.Add(1)
@@ -137,7 +137,7 @@ func handleClient(l *Listener, conn *Conn, handleConn func(conn *Conn), handleMs
 		}()
 	}
 
-	return conn.error
+	return conn.err
 }
 
 // Close closes the listener.
