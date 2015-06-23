@@ -64,10 +64,9 @@ func (a *App) neptulonMiddleware(conn *neptulon.Conn, msg []byte) []byte {
 			ctx := ReqContext{Conn: conn, Req: &Request{ID: m.ID, Method: m.Method, Params: m.Params}}
 			for _, mid := range a.reqMiddleware {
 				mid(&ctx)
-				if ctx.Res == nil && ctx.ResErr == nil {
-					continue
-				}
+			}
 
+			if ctx.Res != nil || ctx.ResErr != nil {
 				data, err := json.Marshal(Response{ID: m.ID, Result: ctx.Res, Error: ctx.ResErr})
 				if err != nil {
 					log.Fatalln("Errored while serializing JSON-RPC response:", err)
