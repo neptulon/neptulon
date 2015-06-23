@@ -10,6 +10,8 @@ type CertAuth struct {
 func NewCertAuth(app *App) (*CertAuth, error) {
 	a := CertAuth{}
 	app.ReqMiddleware(a.reqMiddleware)
+	app.ResMiddleware(a.resMiddleware)
+	app.NotMiddleware(a.notMiddleware)
 	return &a, nil
 }
 
@@ -22,8 +24,8 @@ func (a *CertAuth) reqMiddleware(ctx *ReqContext) {
 	certs := ctx.Conn.ConnectionState().PeerCertificates
 	if len(certs) == 0 {
 		ctx.ResErr = &ResError{Code: 666, Message: "Invalid client certificate.", Data: certs}
-		log.Println("Invalid client-certificate connection attempt:", ctx.Conn.RemoteAddr())
-		// todo: close conn
+		log.Println("Invalid client-certificate authentication attempt:", ctx.Conn.RemoteAddr())
+		// todo: Ctx.End / Conn.Close
 		return
 	}
 
@@ -32,4 +34,18 @@ func (a *CertAuth) reqMiddleware(ctx *ReqContext) {
 	log.Println("Client-certificate authenticated:", ctx.Conn.RemoteAddr(), userID)
 }
 
-// todo: also check notification and response routes but how to streamline this? revive generic app.Middleware(ctx *Message) ???
+func (a *CertAuth) resMiddleware(ctx *ResContext) {
+	if ctx.Conn.Session.Get("userid") != nil {
+		return
+	}
+
+	ctx.Conn.Close()
+}
+
+func (a *CertAuth) notMiddleware(ctx *NotContext) {
+	if ctx.Conn.Session.Get("userid") != nil {
+		return
+	}
+
+	ctx.Conn.Close()
+}

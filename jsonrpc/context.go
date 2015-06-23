@@ -9,7 +9,14 @@ type ReqContext struct {
 	Res     interface{}
 	ResErr  *ResError
 	handled bool
+	closed  bool
 	err     error // returns error to user (if not empty) and closes conn
+}
+
+// Close closes the context object preventing any other registered middleware from handling the request.
+func (ctx *ReqContext) Close() *ReqContext {
+	ctx.closed = true
+	return ctx
 }
 
 // // Res returns the response object if it was set.
