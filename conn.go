@@ -154,6 +154,7 @@ func (c *Conn) Write(msg []byte) (n int, err error) {
 }
 
 // Close closes a connection.
+// Note that TCP/IP stack does not guarantee delivery of messages before the connection is closed.
 func (c *Conn) Close() error {
 	return c.conn.Close() // todo: if conn.err is nil, send a close req and wait ack then close? (or even wait for everything else to finish?)
 }
