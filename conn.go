@@ -13,15 +13,15 @@ import (
 
 // Conn is a mobile client connection.
 type Conn struct {
-	ID                string // Randomly generated unique connection ID
-	Session           *Session
-	conn              *tls.Conn
-	headerSize        int
-	maxMsgSize        int
-	readWriteDeadline time.Duration
-	err               error
-	disconnected      bool
-	debug             bool
+	ID                 string // Randomly generated unique connection ID
+	Session            *Session
+	conn               *tls.Conn
+	headerSize         int
+	maxMsgSize         int
+	readWriteDeadline  time.Duration
+	err                error
+	clientDisconnected bool
+	debug              bool
 }
 
 // NewConn creates a new server-side connection object.
@@ -153,12 +153,6 @@ func (c *Conn) Write(msg []byte) (n int, err error) {
 	return
 }
 
-// Close closes a connection.
-// Note that TCP/IP stack does not guarantee delivery of messages before the connection is closed.
-func (c *Conn) Close() error {
-	return c.conn.Close() // todo: if conn.err is nil, send a close req and wait ack then close? (or even wait for everything else to finish?)
-}
-
 // RemoteAddr returns the remote network address.
 func (c *Conn) RemoteAddr() net.Addr {
 	return c.conn.RemoteAddr()
@@ -167,6 +161,12 @@ func (c *Conn) RemoteAddr() net.Addr {
 // ConnectionState returns basic TLS details about the connection.
 func (c *Conn) ConnectionState() tls.ConnectionState {
 	return c.conn.ConnectionState()
+}
+
+// Close closes a connection.
+// Note: TCP/IP stack does not guarantee delivery of messages before the connection is closed.
+func (c *Conn) Close() error {
+	return c.conn.Close() // todo: if conn.err is nil, send a close req and wait ack then close? (or even wait for everything else to finish?)
 }
 
 func makeHeaderBytes(h, size int) []byte {

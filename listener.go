@@ -95,7 +95,7 @@ func handleClient(l *Listener, conn *Conn, handleConn func(conn *Conn), handleMs
 
 	defer func() {
 		conn.err = conn.Close() // todo: handle close error, store the error in conn object and return it to handleMsg/handleErr/handleDisconn or one level up (to server)
-		if conn.disconnected {
+		if conn.clientDisconnected {
 			log.Println("Client disconnected:", conn.RemoteAddr())
 		} else {
 			log.Println("Closed client connection:", conn.RemoteAddr())
@@ -112,11 +112,11 @@ func handleClient(l *Listener, conn *Conn, handleConn func(conn *Conn), handleMs
 		n, msg, err := conn.Read()
 		if err != nil {
 			if err == io.EOF {
-				conn.disconnected = true
+				conn.clientDisconnected = true
 				break
 			}
 			if operr, ok := err.(*net.OpError); ok && operr.Op == "read" && operr.Err.Error() == "use of closed network connection" {
-				conn.disconnected = true
+				conn.clientDisconnected = true
 				break
 			}
 			log.Fatalln("Errored while reading:", err)
