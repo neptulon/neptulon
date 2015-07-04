@@ -26,7 +26,7 @@ func Dial(addr string, rootCA []byte, clientCert []byte, clientCertKey []byte, d
 
 // SetReadDeadline set the read deadline for the connection in seconds.
 func (c *Client) SetReadDeadline(seconds int) {
-	c.SetReadDeadline(seconds)
+	c.conn.SetReadDeadline(seconds)
 }
 
 // ReadMsg reads a message off of a client connection and returns a request, response, or notification message depending on what server sent.
