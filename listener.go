@@ -19,10 +19,11 @@ var (
 
 // Listener accepts connections from devices.
 type Listener struct {
-	debug    bool
-	listener net.Listener
-	connWG   sync.WaitGroup
-	reqWG    sync.WaitGroup
+	debug             bool
+	listener          net.Listener
+	readWriteDeadline int
+	connWG            sync.WaitGroup
+	reqWG             sync.WaitGroup
 }
 
 // Listen creates a TCP listener with the given PEM encoded X.509 certificate and the private key on the local network address laddr.
@@ -53,6 +54,12 @@ func Listen(cert, privKey []byte, laddr string, debug bool) (*Listener, error) {
 	}, nil
 }
 
+// SetReadWriteDeadline sets the read/write deadline for incoming connections.
+// If not set, default deadline of Conn struct is used.
+func (l *Listener) SetReadWriteDeadline(seconds int) {
+	l.readWriteDeadline = seconds
+}
+
 // Accept waits for incoming connections and forwards the client connect/message/disconnect events to provided handlers in a new goroutine.
 // This function blocks and never returns, unless there is an error while accepting a new connection.
 func (l *Listener) Accept(handleConn func(conn *Conn), handleMsg func(conn *Conn, msg []byte), handleDisconn func(conn *Conn)) error {
@@ -78,7 +85,7 @@ func (l *Listener) Accept(handleConn func(conn *Conn), handleMsg func(conn *Conn
 		l.connWG.Add(1)
 		log.Println("Client connected:", conn.RemoteAddr())
 
-		c, err := NewConn(tlsconn, 0, 0, 0, l.debug)
+		c, err := NewConn(tlsconn, 0, 0, l.readWriteDeadline, l.debug)
 		if err != nil {
 			return err
 		}
