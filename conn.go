@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-// Conn is a mobile client connection.
+// Conn is a client connection.
 type Conn struct {
 	ID                 string // Randomly generated unique connection ID
 	Session            *Session
@@ -19,9 +19,9 @@ type Conn struct {
 	headerSize         int
 	maxMsgSize         int
 	readWriteDeadline  time.Duration
-	err                error
-	clientDisconnected bool
 	debug              bool
+	err                error
+	clientDisconnected bool // whether the client disconnected from server before server closed connection
 }
 
 // NewConn creates a new server-side connection object.
