@@ -18,24 +18,24 @@ type Conn struct {
 	conn               *tls.Conn
 	headerSize         int
 	maxMsgSize         int
-	readWriteDeadline  time.Duration
+	readDeadline       time.Duration
 	debug              bool
 	err                error
 	clientDisconnected bool // Whether the client disconnected from server before server closed connection
 }
 
 // NewConn creates a new server-side connection object.
-// Default values for headerSize, maxMsgSize, and readWriteDeadline are 4 bytes, 4294967295 bytes (4GB), and 300 seconds, respectively.
+// Default values for headerSize, maxMsgSize, and readDeadline are 4 bytes, 4294967295 bytes (4GB), and 300 seconds, respectively.
 // Debug mode logs all raw TCP communication.
-func NewConn(conn *tls.Conn, headerSize, maxMsgSize, readWriteDeadline int, debug bool) (*Conn, error) {
+func NewConn(conn *tls.Conn, headerSize, maxMsgSize, readDeadline int, debug bool) (*Conn, error) {
 	if headerSize == 0 {
 		headerSize = 4
 	}
 	if maxMsgSize == 0 {
 		maxMsgSize = 4294967295
 	}
-	if readWriteDeadline == 0 {
-		readWriteDeadline = 300
+	if readDeadline == 0 {
+		readDeadline = 300
 	}
 
 	id, err := GenUID()
@@ -44,13 +44,13 @@ func NewConn(conn *tls.Conn, headerSize, maxMsgSize, readWriteDeadline int, debu
 	}
 
 	return &Conn{
-		ID:                id,
-		Session:           NewSession(),
-		conn:              conn,
-		headerSize:        headerSize,
-		maxMsgSize:        maxMsgSize,
-		readWriteDeadline: time.Second * time.Duration(readWriteDeadline),
-		debug:             debug,
+		ID:           id,
+		Session:      NewSession(),
+		conn:         conn,
+		headerSize:   headerSize,
+		maxMsgSize:   maxMsgSize,
+		readDeadline: time.Second * time.Duration(readDeadline),
+		debug:        debug,
 	}, nil
 }
 
@@ -85,7 +85,7 @@ func Dial(addr string, rootCA []byte, clientCert []byte, clientCertKey []byte, d
 
 // Read waits for and reads the next incoming message from the TLS connection.
 func (c *Conn) Read() (n int, msg []byte, err error) {
-	if err = c.conn.SetReadDeadline(time.Now().Add(c.readWriteDeadline)); err != nil {
+	if err = c.conn.SetReadDeadline(time.Now().Add(c.readDeadline)); err != nil {
 		return
 	}
 
