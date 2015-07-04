@@ -83,6 +83,11 @@ func Dial(addr string, rootCA []byte, clientCert []byte, clientCertKey []byte, d
 	return NewConn(c, 0, 0, 0, debug)
 }
 
+// SetReadDeadline set the read deadline for the connection in seconds.
+func (c *Conn) SetReadDeadline(seconds int) {
+	c.readDeadline = time.Second * time.Duration(seconds)
+}
+
 // Read waits for and reads the next incoming message from the TLS connection.
 func (c *Conn) Read() (n int, msg []byte, err error) {
 	if err = c.conn.SetReadDeadline(time.Now().Add(c.readDeadline)); err != nil {
