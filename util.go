@@ -36,6 +36,10 @@ func GenUID() (string, error) {
 	return fmt.Sprintf("m-%x", b), nil
 }
 
+// possible replacement candidates:
+// https://github.com/coreos/etcd-ca
+// *https://github.com/square/certstrap
+
 // genCert generates a PEM encoded X.509 certificate and private key pair (i.e. 'cert.pem', 'key.pem').
 // This code is based on the sample from http://golang.org/src/crypto/tls/generate_cert.go (taken at Jan 30, 2015).
 // If no private key is provided, the certificate is marked as self-signed CA.
