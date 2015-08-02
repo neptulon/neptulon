@@ -31,6 +31,8 @@ type Listener struct {
 func Listen(cert, privKey, clientCACert []byte, laddr string, debug bool) (*Listener, error) {
 	// todo: add leaf certs to tlsCert (and maybe all CAs)
 	tlsCert, err := tls.X509KeyPair(cert, privKey)
+	// tlsCert.Certificate = append(tlsCert.Certificate, clientCACert)
+	// tlsCert.Leaf, err = x509.ParseCertificate(cert)
 	pool := x509.NewCertPool()
 	ok := pool.AppendCertsFromPEM(clientCACert)
 	if err != nil || !ok {

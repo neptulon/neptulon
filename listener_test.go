@@ -23,7 +23,7 @@ func TestListener(t *testing.T) {
 
 	host := "localhost:3010"
 	cert, privKey, _ := genCert("localhost", 0, nil, nil, 512, "localhost", "devastator")
-	l, err := Listen(cert, privKey, host, false)
+	l, err := Listen(cert, privKey, cert, host, false)
 	if err != nil {
 		t.Fatal(err)
 	}
