@@ -54,14 +54,14 @@ func NewConn(conn *tls.Conn, headerSize, maxMsgSize, readDeadline int, debug boo
 	}, nil
 }
 
-// Dial creates a new client side connection to a given network address with optional root CA and/or a client certificate (PEM encoded X.509 cert/key).
+// Dial creates a new client side connection to a given network address with optional CA and/or a client certificate (PEM encoded X.509 cert/key).
 // Debug mode logs all raw TCP communication.
-func Dial(addr string, rootCA []byte, clientCert []byte, clientCertKey []byte, debug bool) (*Conn, error) {
-	var roots *x509.CertPool
+func Dial(addr string, ca []byte, clientCert []byte, clientCertKey []byte, debug bool) (*Conn, error) {
+	var cas *x509.CertPool
 	var certs []tls.Certificate
-	if rootCA != nil {
-		roots = x509.NewCertPool()
-		ok := roots.AppendCertsFromPEM(rootCA)
+	if ca != nil {
+		cas = x509.NewCertPool()
+		ok := cas.AppendCertsFromPEM(ca)
 		if !ok {
 			return nil, errors.New("failed to parse root certificate")
 		}
@@ -75,7 +75,7 @@ func Dial(addr string, rootCA []byte, clientCert []byte, clientCertKey []byte, d
 	}
 
 	// todo: dial timeout like that of net.Conn.DialTimeout
-	c, err := tls.Dial("tcp", addr, &tls.Config{RootCAs: roots, Certificates: certs})
+	c, err := tls.Dial("tcp", addr, &tls.Config{RootCAs: cas, Certificates: certs})
 	if err != nil {
 		return nil, err
 	}

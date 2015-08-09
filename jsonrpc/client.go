@@ -13,10 +13,10 @@ type Client struct {
 	conn *neptulon.Conn
 }
 
-// Dial creates a new client connection to a given network address with optional root CA and/or a client certificate (PEM encoded X.509 cert/key).
+// Dial creates a new client connection to a given network address with optional CA and/or a client certificate (PEM encoded X.509 cert/key).
 // Debug mode logs all raw TCP communication.
-func Dial(addr string, rootCA []byte, clientCert []byte, clientCertKey []byte, debug bool) (*Client, error) {
-	c, err := neptulon.Dial(addr, rootCA, clientCert, clientCertKey, debug)
+func Dial(addr string, ca []byte, clientCert []byte, clientCertKey []byte, debug bool) (*Client, error) {
+	c, err := neptulon.Dial(addr, ca, clientCert, clientCertKey, debug)
 	if err != nil {
 		return nil, err
 	}

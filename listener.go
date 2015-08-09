@@ -29,8 +29,8 @@ type Listener struct {
 // Listen creates a TCP listener with the given PEM encoded X.509 certificate and the private key on the local network address laddr.
 // Debug mode logs all server activity.
 func Listen(cert, privKey, clientCACert []byte, laddr string, debug bool) (*Listener, error) {
-	// todo: add leaf certs to tlsCert (and maybe all CAs)
 	tlsCert, err := tls.X509KeyPair(cert, privKey)
+	// todo: add leaf certs to tlsCert (and maybe all CAs)
 	// tlsCert.Certificate = append(tlsCert.Certificate, clientCACert)
 	// tlsCert.Leaf, err = x509.ParseCertificate(cert)
 	pool := x509.NewCertPool()
