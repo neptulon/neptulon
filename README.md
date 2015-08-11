@@ -11,12 +11,12 @@ Example
 -------
 
 ```go
-nep, _ := neptulon.NewApp(cert, privKey, "127.0.0.1:3000", true)
+nep, _ := neptulon.NewApp(cert, privKey, nil, "127.0.0.1:3000", true)
 rpc, _ := jsonrpc.NewApp(nep)
 route, _ := jsonrpc.NewRouter(rpc)
 
-route.Request("echo", func(ctx *jsonrpc.ReqContext) {
-	ctx.Res = ctx.Req.Params
+route.Request("ping", func(ctx *jsonrpc.ReqContext) {
+	ctx.Res = "pong"
 })
 ```
 
