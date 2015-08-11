@@ -10,6 +10,8 @@ Framework core is a small ~1000 SLOC codebase which makes it easy to fork, speci
 Example
 -------
 
+Following example creates a TLS listener with JSON-RPC 2.0 protocol and starts listening for 'ping' requests and replies with a typical 'pong'.
+
 ```go
 nep, _ := neptulon.NewApp(cert, privKey, nil, "127.0.0.1:3000", true)
 rpc, _ := jsonrpc.NewApp(nep)
