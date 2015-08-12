@@ -21,8 +21,9 @@ func (s *Session) Set(key string, val interface{}) {
 }
 
 // Get retrieves a value for a given key in the session.
-func (s *Session) Get(key string) interface{} {
+func (s *Session) Get(key string) (val interface{}, ok bool) {
 	s.mutex.RLock()
-	defer s.mutex.RUnlock()
-	return s.data[key]
+	val, ok = s.data[key]
+	s.mutex.RUnlock()
+	return
 }

@@ -6,6 +6,9 @@ import (
 	"strconv"
 	"sync"
 	"testing"
+	"time"
+
+	"github.com/nbusy/ca"
 )
 
 func TestLen(t *testing.T) {
@@ -21,9 +24,13 @@ func TestListener(t *testing.T) {
 	msg4 := randString(45000)   //0.45 MB
 	msg5 := randString(5000000) //5.0 MB
 
-	host := "localhost:3010"
-	cert, privKey, _ := genCert("localhost", 0, nil, nil, 512, "localhost", "devastator")
-	l, err := Listen(cert, privKey, host, false)
+	host := "127.0.0.1:3010"
+	certChain, err := ca.GenCertChain("FooBar", "127.0.0.1", "127.0.0.1", time.Hour, 512)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	l, err := Listen(certChain.ServerCert, certChain.ServerKey, certChain.IntCACert, host, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -47,7 +54,7 @@ func TestListener(t *testing.T) {
 	}()
 
 	roots := x509.NewCertPool()
-	ok := roots.AppendCertsFromPEM(cert)
+	ok := roots.AppendCertsFromPEM(certChain.IntCACert)
 	if !ok {
 		panic("failed to parse root certificate")
 	}

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"io"
@@ -19,20 +20,30 @@ var (
 
 // Listener accepts connections from devices.
 type Listener struct {
-	debug    bool
-	listener net.Listener
-	connWG   sync.WaitGroup
-	reqWG    sync.WaitGroup
+	debug        bool
+	listener     net.Listener
+	readDeadline int
+	connWG       sync.WaitGroup
+	reqWG        sync.WaitGroup
 }
 
 // Listen creates a TCP listener with the given PEM encoded X.509 certificate and the private key on the local network address laddr.
 // Debug mode logs all server activity.
-func Listen(cert, privKey []byte, laddr string, debug bool) (*Listener, error) {
+func Listen(cert, privKey, clientCACert []byte, laddr string, debug bool) (*Listener, error) {
 	tlsCert, err := tls.X509KeyPair(cert, privKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse the server certificate or the private key: %v", err)
+	}
+
+	c, _ := pem.Decode(cert)
+	if tlsCert.Leaf, err = x509.ParseCertificate(c.Bytes); err != nil {
+		return nil, fmt.Errorf("failed to parse the server certificate: %v", err)
+	}
+
 	pool := x509.NewCertPool()
-	ok := pool.AppendCertsFromPEM(cert)
-	if err != nil || !ok {
-		return nil, fmt.Errorf("failed to parse the certificate or the private key: %v", err)
+	ok := pool.AppendCertsFromPEM(clientCACert)
+	if !ok {
+		return nil, fmt.Errorf("failed to parse the CA certificate: %v", err)
 	}
 
 	conf := tls.Config{
@@ -51,6 +62,12 @@ func Listen(cert, privKey []byte, laddr string, debug bool) (*Listener, error) {
 		debug:    debug,
 		listener: l,
 	}, nil
+}
+
+// SetReadDeadline sets the read deadline for connections.
+// If not set, default deadline of Conn struct is used.
+func (l *Listener) SetReadDeadline(seconds int) {
+	l.readDeadline = seconds
 }
 
 // Accept waits for incoming connections and forwards the client connect/message/disconnect events to provided handlers in a new goroutine.
@@ -78,7 +95,7 @@ func (l *Listener) Accept(handleConn func(conn *Conn), handleMsg func(conn *Conn
 		l.connWG.Add(1)
 		log.Println("Client connected:", conn.RemoteAddr())
 
-		c, err := NewConn(tlsconn, 0, 0, 0, l.debug)
+		c, err := NewConn(tlsconn, 0, 0, l.readDeadline, l.debug)
 		if err != nil {
 			return err
 		}
@@ -95,7 +112,7 @@ func handleClient(l *Listener, conn *Conn, handleConn func(conn *Conn), handleMs
 
 	defer func() {
 		conn.err = conn.Close() // todo: handle close error, store the error in conn object and return it to handleMsg/handleErr/handleDisconn or one level up (to server)
-		if conn.disconnected {
+		if conn.clientDisconnected {
 			log.Println("Client disconnected:", conn.RemoteAddr())
 		} else {
 			log.Println("Closed client connection:", conn.RemoteAddr())
@@ -112,11 +129,11 @@ func handleClient(l *Listener, conn *Conn, handleConn func(conn *Conn), handleMs
 		n, msg, err := conn.Read()
 		if err != nil {
 			if err == io.EOF {
-				conn.disconnected = true
+				conn.clientDisconnected = true
 				break
 			}
 			if operr, ok := err.(*net.OpError); ok && operr.Op == "read" && operr.Err.Error() == "use of closed network connection" {
-				conn.disconnected = true
+				conn.clientDisconnected = true
 				break
 			}
 			log.Fatalln("Errored while reading:", err)

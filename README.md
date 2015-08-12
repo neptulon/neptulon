@@ -10,13 +10,15 @@ Framework core is a small ~1000 SLOC codebase which makes it easy to fork, speci
 Example
 -------
 
-```go
-nep, _ := neptulon.NewApp(cert, privKey, "127.0.0.1:3000", true)
-rpc, _ := jsonrpc.NewApp(nep)
-rout, _ := jsonrpc.NewRouter(rpc)
+Following example creates a TLS listener with JSON-RPC 2.0 protocol and starts listening for 'ping' requests and replies with a typical 'pong'.
 
-rout.Request("echo", func(ctx *jsonrpc.ReqContext) {
-	ctx.Res = ctx.Req.Params
+```go
+nep, _ := neptulon.NewApp(cert, privKey, nil, "127.0.0.1:3000", true)
+rpc, _ := jsonrpc.NewApp(nep)
+route, _ := jsonrpc.NewRouter(rpc)
+
+route.Request("ping", func(ctx *jsonrpc.ReqContext) {
+	ctx.Res = "pong"
 })
 ```
 

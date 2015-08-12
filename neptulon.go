@@ -19,8 +19,8 @@ type App struct {
 
 // NewApp creates a Neptulon app. This is the default TLS constructor.
 // Debug mode dumps raw TCP data to stderr (log.Println() default).
-func NewApp(cert, privKey []byte, laddr string, debug bool) (*App, error) {
-	l, err := Listen(cert, privKey, laddr, debug)
+func NewApp(cert, privKey, clientCACert []byte, laddr string, debug bool) (*App, error) {
+	l, err := Listen(cert, privKey, clientCACert, laddr, debug)
 	if err != nil {
 		return nil, err
 	}

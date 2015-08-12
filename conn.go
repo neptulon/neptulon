@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/binary"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"log"
@@ -11,31 +12,31 @@ import (
 	"time"
 )
 
-// Conn is a mobile client connection.
+// Conn is a client connection.
 type Conn struct {
-	ID                string // Randomly generated unique connection ID
-	Session           *Session
-	conn              *tls.Conn
-	headerSize        int
-	maxMsgSize        int
-	readWriteDeadline time.Duration
-	err               error
-	disconnected      bool
-	debug             bool
+	ID                 string // Randomly generated unique connection ID
+	Session            *Session
+	conn               *tls.Conn
+	headerSize         int
+	maxMsgSize         int
+	readDeadline       time.Duration
+	debug              bool
+	err                error
+	clientDisconnected bool // Whether the client disconnected from server before server closed connection
 }
 
 // NewConn creates a new server-side connection object.
-// Default values for headerSize, maxMsgSize, and readWriteDeadline are 4 bytes, 4294967295 bytes (4GB), and 300 seconds, respectively.
+// Default values for headerSize, maxMsgSize, and readDeadline are 4 bytes, 4294967295 bytes (4GB), and 300 seconds, respectively.
 // Debug mode logs all raw TCP communication.
-func NewConn(conn *tls.Conn, headerSize, maxMsgSize, readWriteDeadline int, debug bool) (*Conn, error) {
+func NewConn(conn *tls.Conn, headerSize, maxMsgSize, readDeadline int, debug bool) (*Conn, error) {
 	if headerSize == 0 {
 		headerSize = 4
 	}
 	if maxMsgSize == 0 {
 		maxMsgSize = 4294967295
 	}
-	if readWriteDeadline == 0 {
-		readWriteDeadline = 300
+	if readDeadline == 0 {
+		readDeadline = 300
 	}
 
 	id, err := GenUID()
@@ -44,26 +45,26 @@ func NewConn(conn *tls.Conn, headerSize, maxMsgSize, readWriteDeadline int, debu
 	}
 
 	return &Conn{
-		ID:                id,
-		Session:           NewSession(),
-		conn:              conn,
-		headerSize:        headerSize,
-		maxMsgSize:        maxMsgSize,
-		readWriteDeadline: time.Second * time.Duration(readWriteDeadline),
-		debug:             debug,
+		ID:           id,
+		Session:      NewSession(),
+		conn:         conn,
+		headerSize:   headerSize,
+		maxMsgSize:   maxMsgSize,
+		readDeadline: time.Second * time.Duration(readDeadline),
+		debug:        debug,
 	}, nil
 }
 
-// Dial creates a new client side connection to a given network address with optional root CA and/or a client certificate (PEM encoded X.509 cert/key).
+// Dial creates a new client side connection to a given network address with optional CA and/or a client certificate (PEM encoded X.509 cert/key).
 // Debug mode logs all raw TCP communication.
-func Dial(addr string, rootCA []byte, clientCert []byte, clientCertKey []byte, debug bool) (*Conn, error) {
-	var roots *x509.CertPool
+func Dial(addr string, ca []byte, clientCert []byte, clientCertKey []byte, debug bool) (*Conn, error) {
+	var cas *x509.CertPool
 	var certs []tls.Certificate
-	if rootCA != nil {
-		roots = x509.NewCertPool()
-		ok := roots.AppendCertsFromPEM(rootCA)
+	if ca != nil {
+		cas = x509.NewCertPool()
+		ok := cas.AppendCertsFromPEM(ca)
 		if !ok {
-			return nil, errors.New("failed to parse root certificate")
+			return nil, errors.New("failed to parse the CA certificate")
 		}
 	}
 	if clientCert != nil {
@@ -71,11 +72,17 @@ func Dial(addr string, rootCA []byte, clientCert []byte, clientCertKey []byte, d
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse the client certificate: %v", err)
 		}
+
+		c, _ := pem.Decode(clientCert)
+		if tlsCert.Leaf, err = x509.ParseCertificate(c.Bytes); err != nil {
+			return nil, fmt.Errorf("failed to parse the client certificate: %v", err)
+		}
+
 		certs = []tls.Certificate{tlsCert}
 	}
 
 	// todo: dial timeout like that of net.Conn.DialTimeout
-	c, err := tls.Dial("tcp", addr, &tls.Config{RootCAs: roots, Certificates: certs})
+	c, err := tls.Dial("tcp", addr, &tls.Config{RootCAs: cas, Certificates: certs})
 	if err != nil {
 		return nil, err
 	}
@@ -83,9 +90,14 @@ func Dial(addr string, rootCA []byte, clientCert []byte, clientCertKey []byte, d
 	return NewConn(c, 0, 0, 0, debug)
 }
 
+// SetReadDeadline set the read deadline for the connection in seconds.
+func (c *Conn) SetReadDeadline(seconds int) {
+	c.readDeadline = time.Second * time.Duration(seconds)
+}
+
 // Read waits for and reads the next incoming message from the TLS connection.
 func (c *Conn) Read() (n int, msg []byte, err error) {
-	if err = c.conn.SetReadDeadline(time.Now().Add(c.readWriteDeadline)); err != nil {
+	if err = c.conn.SetReadDeadline(time.Now().Add(c.readDeadline)); err != nil {
 		return
 	}
 
@@ -153,12 +165,6 @@ func (c *Conn) Write(msg []byte) (n int, err error) {
 	return
 }
 
-// Close closes a connection.
-// Note that TCP/IP stack does not guarantee delivery of messages before the connection is closed.
-func (c *Conn) Close() error {
-	return c.conn.Close() // todo: if conn.err is nil, send a close req and wait ack then close? (or even wait for everything else to finish?)
-}
-
 // RemoteAddr returns the remote network address.
 func (c *Conn) RemoteAddr() net.Addr {
 	return c.conn.RemoteAddr()
@@ -167,6 +173,12 @@ func (c *Conn) RemoteAddr() net.Addr {
 // ConnectionState returns basic TLS details about the connection.
 func (c *Conn) ConnectionState() tls.ConnectionState {
 	return c.conn.ConnectionState()
+}
+
+// Close closes a connection.
+// Note: TCP/IP stack does not guarantee delivery of messages before the connection is closed.
+func (c *Conn) Close() error {
+	return c.conn.Close() // todo: if conn.err is nil, send a close req and wait ack then close? (or even wait for everything else to finish?)
 }
 
 func makeHeaderBytes(h, size int) []byte {

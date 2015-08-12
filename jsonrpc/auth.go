@@ -16,7 +16,7 @@ func NewCertAuth(app *App) (*CertAuth, error) {
 }
 
 func (a *CertAuth) reqMiddleware(ctx *ReqContext) {
-	if ctx.Conn.Session.Get("userid") != nil {
+	if _, ok := ctx.Conn.Session.Get("userid"); ok {
 		return
 	}
 
@@ -35,7 +35,7 @@ func (a *CertAuth) reqMiddleware(ctx *ReqContext) {
 }
 
 func (a *CertAuth) resMiddleware(ctx *ResContext) {
-	if ctx.Conn.Session.Get("userid") != nil {
+	if _, ok := ctx.Conn.Session.Get("userid"); ok {
 		return
 	}
 
@@ -44,7 +44,7 @@ func (a *CertAuth) resMiddleware(ctx *ResContext) {
 }
 
 func (a *CertAuth) notMiddleware(ctx *NotContext) {
-	if ctx.Conn.Session.Get("userid") != nil {
+	if _, ok := ctx.Conn.Session.Get("userid"); ok {
 		return
 	}
 
