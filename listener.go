@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"io"
@@ -30,13 +31,19 @@ type Listener struct {
 // Debug mode logs all server activity.
 func Listen(cert, privKey, clientCACert []byte, laddr string, debug bool) (*Listener, error) {
 	tlsCert, err := tls.X509KeyPair(cert, privKey)
-	// todo: add leaf certs to tlsCert (and maybe all CAs)
-	// tlsCert.Certificate = append(tlsCert.Certificate, clientCACert)
-	// tlsCert.Leaf, err = x509.ParseCertificate(cert)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse the server certificate or the private key: %v", err)
+	}
+
+	c, _ := pem.Decode(cert)
+	if tlsCert.Leaf, err = x509.ParseCertificate(c.Bytes); err != nil {
+		return nil, fmt.Errorf("failed to parse the server certificate: %v", err)
+	}
+
 	pool := x509.NewCertPool()
 	ok := pool.AppendCertsFromPEM(clientCACert)
-	if err != nil || !ok {
-		return nil, fmt.Errorf("failed to parse the certificate or the private key: %v", err)
+	if !ok {
+		return nil, fmt.Errorf("failed to parse the CA certificate: %v", err)
 	}
 
 	conf := tls.Config{

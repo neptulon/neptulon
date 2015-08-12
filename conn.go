@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/binary"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"log"
@@ -63,7 +64,7 @@ func Dial(addr string, ca []byte, clientCert []byte, clientCertKey []byte, debug
 		cas = x509.NewCertPool()
 		ok := cas.AppendCertsFromPEM(ca)
 		if !ok {
-			return nil, errors.New("failed to parse root certificate")
+			return nil, errors.New("failed to parse the CA certificate")
 		}
 	}
 	if clientCert != nil {
@@ -71,6 +72,12 @@ func Dial(addr string, ca []byte, clientCert []byte, clientCertKey []byte, debug
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse the client certificate: %v", err)
 		}
+
+		c, _ := pem.Decode(clientCert)
+		if tlsCert.Leaf, err = x509.ParseCertificate(c.Bytes); err != nil {
+			return nil, fmt.Errorf("failed to parse the client certificate: %v", err)
+		}
+
 		certs = []tls.Certificate{tlsCert}
 	}
 
