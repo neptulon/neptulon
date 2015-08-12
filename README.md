@@ -20,6 +20,8 @@ route, _ := jsonrpc.NewRouter(rpc)
 route.Request("ping", func(ctx *jsonrpc.ReqContext) {
 	ctx.Res = "pong"
 })
+
+nep.Run()
 ```
 
 Testing
