@@ -2,6 +2,7 @@
 package neptulon
 
 import (
+	"fmt"
 	"log"
 	"sync"
 )
@@ -72,7 +73,7 @@ func (a *App) Stop() error {
 
 	a.errMutex.RLock()
 	if a.err != nil {
-		return a.err
+		return fmt.Errorf("Past internal error: %v", a.err)
 	}
 	a.errMutex.RUnlock()
 	return err
