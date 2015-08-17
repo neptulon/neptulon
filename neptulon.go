@@ -66,10 +66,7 @@ func (a *App) Stop() error {
 	// this is not a problem as we always require an ACK but it will also mean that message deliveries will be at-least-once; to-and-from the server
 	a.connMutex.Lock()
 	for _, conn := range a.conns {
-		err := conn.Close()
-		if err != nil {
-			return err
-		}
+		conn.Close()
 	}
 	a.connMutex.Unlock()
 
