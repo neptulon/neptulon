@@ -100,7 +100,6 @@ func (l *Listener) Accept(handleConn func(conn *Conn), handleMsg func(conn *Conn
 			return err
 		}
 
-		// todo: fire receivedClientConn event
 		go handleClient(l, c, handleConn, handleMsg, handleDisconn)
 	}
 }
@@ -149,7 +148,6 @@ func handleClient(l *Listener, conn *Conn, handleConn func(conn *Conn), handleMs
 		}
 
 		l.reqWG.Add(1)
-		// todo: fire receivedClientRequest event
 		go func() {
 			defer l.reqWG.Done()
 			handleMsg(conn, msg)
