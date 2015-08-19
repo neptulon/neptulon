@@ -64,7 +64,7 @@ func (c *Client) ReadMsg(resultData interface{}) (req *Request, res *Response, n
 	return
 }
 
-// WriteRequest writes a JSON-RPC request to a client connection with structured params object and auto generated request ID.
+// WriteRequest writes a JSON-RPC request message to a client connection with structured params object and auto generated request ID.
 func (c *Client) WriteRequest(method string, params interface{}) (reqID string, err error) {
 	id, err := neptulon.GenUID()
 	if err != nil {
@@ -74,14 +74,19 @@ func (c *Client) WriteRequest(method string, params interface{}) (reqID string, 
 	return id, c.WriteMsg(Request{ID: id, Method: method, Params: params})
 }
 
-// WriteRequestArr writes a JSON-RPC request to a client connection with array params and auto generated request ID.
+// WriteRequestArr writes a JSON-RPC request message to a client connection with array params and auto generated request ID.
 func (c *Client) WriteRequestArr(method string, params ...interface{}) (reqID string, err error) {
-	id, err := neptulon.GenUID()
-	if err != nil {
-		return "", err
-	}
+	return c.WriteRequest(method, params)
+}
 
-	return id, c.WriteMsg(Request{ID: id, Method: method, Params: params})
+// WriteNotification writes a JSON-RPC notification message to a client connection with structured params object.
+func (c *Client) WriteNotification(method string, params interface{}) error {
+	return c.WriteMsg(Notification{Method: method, Params: params})
+}
+
+// WriteNotificationArr writes a JSON-RPC notification message to a client connection with array params.
+func (c *Client) WriteNotificationArr(method string, params ...interface{}) error {
+	return c.WriteNotification(method, params)
 }
 
 // WriteMsg writes any JSON-RPC message to a client connection.
