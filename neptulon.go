@@ -55,8 +55,7 @@ func (a *App) Run() error {
 
 // Send sends a message throught the connection denoted by the connection ID.
 func (a *App) Send(connID string, msg []byte) error {
-	_, err := a.conns[connID].Write(msg)
-	return err
+	return a.conns[connID].Write(msg)
 }
 
 // Stop stops a server instance.
@@ -95,8 +94,7 @@ func handleMsg(a *App) func(conn *Conn, msg []byte) {
 				continue
 			}
 
-			_, err := conn.Write(res)
-			if err != nil {
+			if err := conn.Write(res); err != nil {
 				log.Fatalln("Errored while writing response to connection:", err)
 			}
 

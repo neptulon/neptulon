@@ -1,7 +1,6 @@
 package neptulon
 
 import (
-	"bytes"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
@@ -11,11 +10,6 @@ import (
 	"log"
 	"net"
 	"sync"
-)
-
-var (
-	ping   = []byte("ping")
-	closed = []byte("close")
 )
 
 // Listener accepts connections from devices.
@@ -126,7 +120,7 @@ func handleClient(l *Listener, conn *Conn, handleConn func(conn *Conn), handleMs
 			return conn.err // todo: should we send error message to user, log the error, and close the conn and return instead?
 		}
 
-		n, msg, err := conn.Read()
+		msg, err := conn.Read()
 		if err != nil {
 			if err == io.EOF {
 				conn.clientDisconnected = true
@@ -137,14 +131,6 @@ func handleClient(l *Listener, conn *Conn, handleConn func(conn *Conn), handleMs
 				break
 			}
 			log.Fatalln("Errored while reading:", err)
-		}
-
-		// shortcut 'ping' and 'close' messages, saves some processing time
-		if n == 4 && bytes.Equal(msg, ping) {
-			continue // send back pong?
-		}
-		if n == 5 && bytes.Equal(msg, closed) {
-			return conn.err
 		}
 
 		l.reqWG.Add(1)
