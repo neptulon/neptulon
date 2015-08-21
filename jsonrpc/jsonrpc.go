@@ -47,7 +47,7 @@ func (a *App) Send(connID string, msg interface{}) {
 
 	err = a.neptulon.Send(connID, data)
 	if err != nil {
-		log.Fatalln("Errored sending JSON-RPC message:", err)
+		log.Fatalln("Errored while sending JSON-RPC message:", err)
 	}
 }
 

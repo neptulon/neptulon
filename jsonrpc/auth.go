@@ -2,6 +2,12 @@ package jsonrpc
 
 import "log"
 
+// todo: action taken in response to un authenticated req/res/not messages should be configurable on per-item basis,
+// as closing the connection always might not be the desired behavior
+
+// todo2: we need to pass client CA cert as a param here which will add it to listener.tls.Config file as client CA cert
+// rather than TLS listener always requiring client CA cert w/ constructor
+
 // CertAuth is a TLS certificate authentication middleware for Neptulon JSON-RPC app.
 type CertAuth struct {
 }
