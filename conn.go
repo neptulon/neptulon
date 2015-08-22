@@ -14,8 +14,7 @@ import (
 
 // Conn is a client connection.
 type Conn struct {
-	CID                string // Randomly generated unique connection ID
-	UID                string // User ID
+	ID                 string // Randomly generated unique connection ID
 	conn               *tls.Conn
 	headerSize         int
 	maxMsgSize         int
@@ -45,7 +44,7 @@ func NewConn(conn *tls.Conn, headerSize, maxMsgSize, readDeadline int, debug boo
 	}
 
 	return &Conn{
-		CID:          id,
+		ID:           id,
 		conn:         conn,
 		headerSize:   headerSize,
 		maxMsgSize:   maxMsgSize,
