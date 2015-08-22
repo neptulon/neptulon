@@ -22,7 +22,7 @@ func NewCertAuth(app *App) (*CertAuth, error) {
 }
 
 func (a *CertAuth) reqMiddleware(ctx *ReqContext) {
-	if _, ok := ctx.Conn.Session.Get("userid"); ok {
+	if ctx.Conn.UID != "" {
 		return
 	}
 
@@ -36,12 +36,12 @@ func (a *CertAuth) reqMiddleware(ctx *ReqContext) {
 	}
 
 	userID := certs[0].Subject.CommonName
-	ctx.Conn.Session.Set("userid", userID)
+	ctx.Conn.UID = userID
 	log.Println("Client-certificate authenticated:", ctx.Conn.RemoteAddr(), userID)
 }
 
 func (a *CertAuth) resMiddleware(ctx *ResContext) {
-	if _, ok := ctx.Conn.Session.Get("userid"); ok {
+	if ctx.Conn.UID != "" {
 		return
 	}
 
@@ -50,7 +50,7 @@ func (a *CertAuth) resMiddleware(ctx *ResContext) {
 }
 
 func (a *CertAuth) notMiddleware(ctx *NotContext) {
-	if _, ok := ctx.Conn.Session.Get("userid"); ok {
+	if ctx.Conn.UID != "" {
 		return
 	}
 

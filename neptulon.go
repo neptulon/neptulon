@@ -81,7 +81,7 @@ func (a *App) Stop() error {
 func handleConn(a *App) func(conn *Conn) {
 	return func(conn *Conn) {
 		a.connMutex.Lock()
-		a.conns[conn.ID] = conn
+		a.conns[conn.CID] = conn
 		a.connMutex.Unlock()
 	}
 }
@@ -106,7 +106,7 @@ func handleMsg(a *App) func(conn *Conn, msg []byte) {
 func handleDisconn(a *App) func(conn *Conn) {
 	return func(conn *Conn) {
 		a.connMutex.Lock()
-		delete(a.conns, conn.ID)
+		delete(a.conns, conn.CID)
 		a.connMutex.Unlock()
 	}
 }
