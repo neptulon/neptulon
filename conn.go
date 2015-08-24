@@ -10,11 +10,14 @@ import (
 	"log"
 	"net"
 	"time"
+
+	"github.com/nbusy/cmap"
 )
 
 // Conn is a client connection.
 type Conn struct {
-	ID                 string // Randomly generated unique connection ID
+	ID                 string    // Randomly generated unique connection ID
+	Data               cmap.CMap // Thread-safe data store for storing arbitrary data for this connection session
 	conn               *tls.Conn
 	headerSize         int
 	maxMsgSize         int
