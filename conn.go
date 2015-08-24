@@ -16,8 +16,8 @@ import (
 
 // Conn is a client connection.
 type Conn struct {
-	ID                 string    // Randomly generated unique connection ID
-	Data               cmap.CMap // Thread-safe data store for storing arbitrary data for this connection session
+	ID                 string     // Randomly generated unique connection ID
+	Data               *cmap.CMap // Thread-safe data store for storing arbitrary data for this connection session
 	conn               *tls.Conn
 	headerSize         int
 	maxMsgSize         int
@@ -48,6 +48,7 @@ func NewConn(conn *tls.Conn, headerSize, maxMsgSize, readDeadline int, debug boo
 
 	return &Conn{
 		ID:           id,
+		Data:         cmap.New(),
 		conn:         conn,
 		headerSize:   headerSize,
 		maxMsgSize:   maxMsgSize,
