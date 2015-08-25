@@ -29,7 +29,7 @@ nep.Run()
 Testing
 -------
 
-All the tests can be executed by `GORACE="halt_on_error=1" go test -race -cover ./...` command. Optionally you can add `-v` flag to observe all connection logs.
+All the tests can be executed with `GORACE="halt_on_error=1" go test -race -cover ./...` command. Optionally you can add `-v` flag to observe all connection logs.
 
 License
 -------
