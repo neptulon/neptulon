@@ -19,7 +19,8 @@ func NewRouter(app *App) (*Router, error) {
 }
 
 // Request adds a new request route registry.
-func (r *Router) Request(route string, handler func(ctx *ReqContext)) {
+// Optionally, you can pass in a data structure that the returned JSON-RPC response result data will be serialized into. Otherwise json.Unmarshal defaults apply.
+func (r *Router) Request(route string, resultData interface{}, handler func(ctx *ReqContext)) {
 	r.reqRoutes[route] = handler
 }
 
