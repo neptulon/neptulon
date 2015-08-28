@@ -1,6 +1,6 @@
 package jsonrpc
 
-// Router is a JSON-RPC request routing middleware.
+// Router is a JSON-RPC message routing middleware.
 type Router struct {
 	jsonrpc        *App
 	reqRoutes      map[string]func(ctx *ReqContext)
@@ -23,19 +23,20 @@ func NewRouter(app *App) (*Router, error) {
 	return &r, nil
 }
 
-// Request adds a new request route registry.
+// Request adds a new incoming request route registry.
 // Optionally, you can pass in a data structure that the returned JSON-RPC response result data will be serialized into. Otherwise json.Unmarshal defaults apply.
 func (r *Router) Request(route string, resultData interface{}, handler func(ctx *ReqContext)) {
 	r.reqRoutes[route] = handler
 }
 
-// Notification adds a new notification route registry.
+// Notification adds a new incoming notification route registry.
 func (r *Router) Notification(route string, handler func(ctx *NotContext)) {
 	r.notRoutes[route] = handler
 }
 
 // SendRequest sends a JSON-RPC request throught the connection denoted by the connection ID.
-func (r *Router) SendRequest(connID string, req *Request) chan<- *Response {
+// Optionally, you can pass in a data structure that the returned JSON-RPC response result data will be serialized into. Otherwise json.Unmarshal defaults apply.
+func (r *Router) SendRequest(connID string, resultData interface{}, req *Request) chan<- *Response {
 	r.jsonrpc.Send(connID, req)
 	ch := make(chan *Response)
 	r.pendinRequests[req.ID] = ch
