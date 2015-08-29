@@ -51,11 +51,16 @@ func (c *Client) ReadMsg(resultData interface{}) (req *Request, res *Response, n
 		}
 
 		// if incoming message is a response
-		if err = json.Unmarshal(msg.Result, resultData); err != nil {
+		var r interface{}
+		if resultData != nil {
+			r = resultData
+		}
+
+		if err = json.Unmarshal(msg.Result, &r); err != nil {
 			return
 		}
 
-		res = &Response{ID: msg.ID, Result: resultData, Error: msg.Error}
+		res = &Response{ID: msg.ID, Result: r, Error: msg.Error}
 		return
 	}
 
