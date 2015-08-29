@@ -1,5 +1,7 @@
 package jsonrpc
 
+import "encoding/json"
+
 // JSON-RPC 2.0 message types. Version field is ommited for brevity.
 
 // Request is a JSON-RPC request object.
@@ -31,9 +33,9 @@ type ResError struct {
 
 // message is a JSON-RPC request, response, or notification message.
 type message struct {
-	ID     string      `json:"id,omitempty"`
-	Method string      `json:"method,omitempty"`
-	Params interface{} `json:"params,omitempty"`
-	Result interface{} `json:"result,omitempty"`
-	Error  *ResError   `json:"error,omitempty"`
+	ID     string          `json:"id,omitempty"`
+	Method string          `json:"method,omitempty"`
+	Params interface{}     `json:"params,omitempty"`
+	Result json.RawMessage `json:"result,omitempty"`
+	Error  *ResError       `json:"error,omitempty"`
 }

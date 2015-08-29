@@ -37,7 +37,7 @@ func (c *Client) ReadMsg(resultData interface{}) (req *Request, res *Response, n
 		return
 	}
 
-	msg := message{Result: resultData}
+	msg := message{}
 	if err = json.Unmarshal(data, &msg); err != nil {
 		return
 	}
@@ -51,7 +51,11 @@ func (c *Client) ReadMsg(resultData interface{}) (req *Request, res *Response, n
 		}
 
 		// if incoming message is a response
-		res = &Response{ID: msg.ID, Result: msg.Result, Error: msg.Error}
+		if err = json.Unmarshal(msg.Result, resultData); err != nil {
+			return
+		}
+
+		res = &Response{ID: msg.ID, Result: resultData, Error: msg.Error}
 		return
 	}
 
