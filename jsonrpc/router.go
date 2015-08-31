@@ -2,24 +2,24 @@ package jsonrpc
 
 // Router is a JSON-RPC message routing middleware.
 type Router struct {
-	jsonrpc        *App
+	jsonrpc        *Server
 	reqRoutes      map[string]func(ctx *ReqCtx)
 	notRoutes      map[string]func(ctx *NotCtx)
 	pendinRequests map[string]chan *ResCtx // requests sent from the router that are pending responses from clients
 }
 
-// NewRouter creates a JSON-RPC router instance and registers it with the Neptulon JSON-RPC app.
-func NewRouter(app *App) (*Router, error) {
+// NewRouter creates a JSON-RPC router instance and registers it with the Neptulon JSON-RPC server.
+func NewRouter(s *Server) (*Router, error) {
 	r := Router{
-		jsonrpc:        app,
+		jsonrpc:        s,
 		reqRoutes:      make(map[string]func(ctx *ReqCtx)),
 		notRoutes:      make(map[string]func(ctx *NotCtx)),
 		pendinRequests: make(map[string]chan *ResCtx),
 	}
 
-	app.ReqMiddleware(r.reqMiddleware)
-	app.NotMiddleware(r.notMiddleware)
-	app.ResMiddleware(r.resMiddleware)
+	s.ReqMiddleware(r.reqMiddleware)
+	s.NotMiddleware(r.notMiddleware)
+	s.ResMiddleware(r.resMiddleware)
 	return &r, nil
 }
 

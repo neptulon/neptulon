@@ -7,8 +7,8 @@ import (
 	"sync"
 )
 
-// App is a Neptulon application.
-type App struct {
+// Server is a Neptulon server.
+type Server struct {
 	debug      bool
 	err        error
 	errMutex   sync.RWMutex
@@ -18,15 +18,15 @@ type App struct {
 	connMutex  sync.Mutex
 }
 
-// NewApp creates a Neptulon app. This is the default TLS constructor.
+// NewServer creates a Neptulon server. This is the default TLS constructor.
 // Debug mode dumps raw TCP data to stderr (log.Println() default).
-func NewApp(cert, privKey, clientCACert []byte, laddr string, debug bool) (*App, error) {
+func NewServer(cert, privKey, clientCACert []byte, laddr string, debug bool) (*Server, error) {
 	l, err := Listen(cert, privKey, clientCACert, laddr, debug)
 	if err != nil {
 		return nil, err
 	}
 
-	return &App{
+	return &Server{
 		debug:    debug,
 		listener: l,
 		conns:    make(map[string]*Conn),
@@ -34,61 +34,61 @@ func NewApp(cert, privKey, clientCACert []byte, laddr string, debug bool) (*App,
 }
 
 // Middleware registers a new middleware to handle incoming messages.
-func (a *App) Middleware(middleware func(conn *Conn, msg []byte) []byte) {
-	a.middleware = append(a.middleware, middleware)
+func (s *Server) Middleware(middleware func(conn *Conn, msg []byte) []byte) {
+	s.middleware = append(s.middleware, middleware)
 }
 
 // Run starts accepting connections on the internal listener and handles connections with registered middleware.
 // This function blocks and never returns, unless there was an error while accepting a new connection or the listner was closed.
-func (a *App) Run() error {
-	err := a.listener.Accept(handleConn(a), handleMsg(a), handleDisconn(a))
-	if err != nil && a.debug {
+func (s *Server) Run() error {
+	err := s.listener.Accept(handleConn(s), handleMsg(s), handleDisconn(s))
+	if err != nil && s.debug {
 		log.Fatalln("Listener returned an error while closing:", err)
 	}
 
-	a.errMutex.Lock()
-	a.err = err
-	a.errMutex.Unlock()
+	s.errMutex.Lock()
+	s.err = err
+	s.errMutex.Unlock()
 
 	return err
 }
 
 // Send sends a message throught the connection denoted by the connection ID.
-func (a *App) Send(connID string, msg []byte) error {
-	return a.conns[connID].Write(msg)
+func (s *Server) Send(connID string, msg []byte) error {
+	return s.conns[connID].Write(msg)
 }
 
 // Stop stops a server instance.
-func (a *App) Stop() error {
-	err := a.listener.Close()
+func (s *Server) Stop() error {
+	err := s.listener.Close()
 
 	// close all active connections discarding any read/writes that is going on currently
 	// this is not a problem as we always require an ACK but it will also mean that message deliveries will be at-least-once; to-and-from the server
-	a.connMutex.Lock()
-	for _, conn := range a.conns {
+	s.connMutex.Lock()
+	for _, conn := range s.conns {
 		conn.Close()
 	}
-	a.connMutex.Unlock()
+	s.connMutex.Unlock()
 
-	a.errMutex.RLock()
-	if a.err != nil {
-		return fmt.Errorf("Past internal error: %v", a.err)
+	s.errMutex.RLock()
+	if s.err != nil {
+		return fmt.Errorf("Past internal error: %v", s.err)
 	}
-	a.errMutex.RUnlock()
+	s.errMutex.RUnlock()
 	return err
 }
 
-func handleConn(a *App) func(conn *Conn) {
+func handleConn(s *Server) func(conn *Conn) {
 	return func(conn *Conn) {
-		a.connMutex.Lock()
-		a.conns[conn.ID] = conn
-		a.connMutex.Unlock()
+		s.connMutex.Lock()
+		s.conns[conn.ID] = conn
+		s.connMutex.Unlock()
 	}
 }
 
-func handleMsg(a *App) func(conn *Conn, msg []byte) {
+func handleMsg(s *Server) func(conn *Conn, msg []byte) {
 	return func(conn *Conn, msg []byte) {
-		for _, m := range a.middleware {
+		for _, m := range s.middleware {
 			res := m(conn, msg)
 			if res == nil {
 				continue
@@ -103,10 +103,10 @@ func handleMsg(a *App) func(conn *Conn, msg []byte) {
 	}
 }
 
-func handleDisconn(a *App) func(conn *Conn) {
+func handleDisconn(s *Server) func(conn *Conn) {
 	return func(conn *Conn) {
-		a.connMutex.Lock()
-		delete(a.conns, conn.ID)
-		a.connMutex.Unlock()
+		s.connMutex.Lock()
+		delete(s.conns, conn.ID)
+		s.connMutex.Unlock()
 	}
 }
