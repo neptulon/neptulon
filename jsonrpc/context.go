@@ -2,6 +2,7 @@ package jsonrpc
 
 import (
 	"encoding/json"
+	"log"
 
 	"github.com/nbusy/neptulon"
 )
@@ -19,8 +20,11 @@ type ReqCtx struct {
 }
 
 // Params reads request parameters into given object.
-func (r *ReqCtx) Params(params interface{}) {
-
+// Object should be passed by reference.
+func (r *ReqCtx) Params(v interface{}) {
+	if err := json.Unmarshal(r.params, v); err != nil {
+		log.Fatal("Cannot deserialize request params:", err)
+	}
 }
 
 // NotCtx encapsulates connection and notification objects.
@@ -33,8 +37,11 @@ type NotCtx struct {
 }
 
 // Params reads response parameters into given object.
-func (r *NotCtx) Params(params interface{}) {
-
+// Object should be passed by reference.
+func (r *NotCtx) Params(v interface{}) {
+	if err := json.Unmarshal(r.params, v); err != nil {
+		log.Fatal("Cannot deserialize notification params:", err)
+	}
 }
 
 // ResCtx encapsulates connection and response objects.
@@ -51,6 +58,9 @@ type ResCtx struct {
 }
 
 // Result reads response result data into given object.
-func (r *ResCtx) Result(params interface{}) {
-
+// Object should be passed by reference.
+func (r *ResCtx) Result(v interface{}) {
+	if err := json.Unmarshal(r.result, v); err != nil {
+		log.Fatalln("Cannot deserialize response result:", err)
+	}
 }

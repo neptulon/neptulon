@@ -11,9 +11,9 @@ import (
 // App is a Neptulon JSON-RPC app.
 type App struct {
 	neptulon      *neptulon.App
-	reqMiddleware []func(ctx *ReqContext)
-	notMiddleware []func(ctx *NotContext)
-	resMiddleware []func(ctx *ResContext)
+	reqMiddleware []func(ctx *ReqCtx)
+	notMiddleware []func(ctx *NotCtx)
+	resMiddleware []func(ctx *ResCtx)
 }
 
 // NewApp creates a Neptulon JSON-RPC app.
@@ -24,17 +24,17 @@ func NewApp(n *neptulon.App) (*App, error) {
 }
 
 // ReqMiddleware registers a new request middleware to handle incoming requests.
-func (a *App) ReqMiddleware(reqMiddleware func(ctx *ReqContext)) {
+func (a *App) ReqMiddleware(reqMiddleware func(ctx *ReqCtx)) {
 	a.reqMiddleware = append(a.reqMiddleware, reqMiddleware)
 }
 
 // NotMiddleware registers a new notification middleware to handle incoming notifications.
-func (a *App) NotMiddleware(notMiddleware func(ctx *NotContext)) {
+func (a *App) NotMiddleware(notMiddleware func(ctx *NotCtx)) {
 	a.notMiddleware = append(a.notMiddleware, notMiddleware)
 }
 
 // ResMiddleware registers a new response middleware to handle incoming responses.
-func (a *App) ResMiddleware(resMiddleware func(ctx *ResContext)) {
+func (a *App) ResMiddleware(resMiddleware func(ctx *ResCtx)) {
 	a.resMiddleware = append(a.resMiddleware, resMiddleware)
 }
 
@@ -61,22 +61,16 @@ func (a *App) neptulonMiddleware(conn *neptulon.Conn, msg []byte) []byte {
 	if m.ID != "" {
 		// if incoming message is a request
 		if m.Method != "" {
-			ctx := ReqContext{Conn: conn, id: m.ID, method: m.Method}
-			if m.Params != nil {
-				if err := json.Unmarshal(m.Params, &ctx.Params); err != nil {
-					log.Fatalln("Cannot deserialize incoming request params:", err)
-				}
-			}
-
+			ctx := ReqCtx{Conn: conn, id: m.ID, method: m.Method, params: m.Params}
 			for _, mid := range a.reqMiddleware {
 				mid(&ctx)
-				if ctx.Done || ctx.Res != nil || ctx.ResErr != nil {
+				if ctx.Done || ctx.Res != nil || ctx.Err != nil {
 					break
 				}
 			}
 
-			if ctx.Res != nil || ctx.ResErr != nil {
-				data, err := json.Marshal(Response{ID: m.ID, Result: ctx.Res, Error: ctx.ResErr})
+			if ctx.Res != nil || ctx.Err != nil {
+				data, err := json.Marshal(Response{ID: m.ID, Result: ctx.Res, Error: ctx.Err})
 				if err != nil {
 					log.Fatalln("Errored while serializing JSON-RPC response:", err)
 				}
@@ -88,13 +82,7 @@ func (a *App) neptulonMiddleware(conn *neptulon.Conn, msg []byte) []byte {
 		}
 
 		// if incoming message is a response
-		ctx := ResContext{Conn: conn, Res: &Response{ID: m.ID, Error: m.Error}}
-		if m.Result != nil {
-			if err := json.Unmarshal(m.Result, &ctx.Res.Result); err != nil {
-				log.Fatalln("Cannot deserialize incoming response result:", err)
-			}
-		}
-
+		ctx := ResCtx{Conn: conn, id: m.ID, result: m.Result, code: m.Error.Code, message: m.Error.Message, data: m.Error.Data}
 		for _, mid := range a.resMiddleware {
 			mid(&ctx)
 			if ctx.Done {
@@ -107,7 +95,7 @@ func (a *App) neptulonMiddleware(conn *neptulon.Conn, msg []byte) []byte {
 
 	// if incoming message is a notification
 	if m.Method != "" {
-		ctx := NotContext{Conn: conn, Not: &Notification{Method: m.Method, Params: m.Params}}
+		ctx := NotCtx{Conn: conn, method: m.Method, params: m.Params}
 		for _, mid := range a.notMiddleware {
 			mid(&ctx)
 			if ctx.Done {
