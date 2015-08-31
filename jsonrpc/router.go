@@ -47,7 +47,7 @@ func (r *Router) SendNotification(connID string, not *Notification) {
 }
 
 func (r *Router) reqMiddleware(ctx *ReqContext) {
-	if handler, ok := r.reqRoutes[ctx.Req.Method]; ok {
+	if handler, ok := r.reqRoutes[ctx.method]; ok {
 		handler(ctx)
 	}
 }

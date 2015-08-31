@@ -61,9 +61,9 @@ func (a *App) neptulonMiddleware(conn *neptulon.Conn, msg []byte) []byte {
 	if m.ID != "" {
 		// if incoming message is a request
 		if m.Method != "" {
-			ctx := ReqContext{Conn: conn, Req: &Request{ID: m.ID, Method: m.Method}}
+			ctx := ReqContext{Conn: conn, id: m.ID, method: m.Method}
 			if m.Params != nil {
-				if err := json.Unmarshal(m.Params, &ctx.Req.Params); err != nil {
+				if err := json.Unmarshal(m.Params, &ctx.Params); err != nil {
 					log.Fatalln("Cannot deserialize incoming request params:", err)
 				}
 			}
