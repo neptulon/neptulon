@@ -22,6 +22,10 @@ type ReqCtx struct {
 // Params reads request parameters into given object.
 // Object should be passed by reference.
 func (r *ReqCtx) Params(v interface{}) {
+	if r.params == nil {
+		return
+	}
+
 	if err := json.Unmarshal(r.params, v); err != nil {
 		log.Fatal("Cannot deserialize request params:", err)
 	}
@@ -39,6 +43,10 @@ type NotCtx struct {
 // Params reads response parameters into given object.
 // Object should be passed by reference.
 func (r *NotCtx) Params(v interface{}) {
+	if r.params == nil {
+		return
+	}
+
 	if err := json.Unmarshal(r.params, v); err != nil {
 		log.Fatal("Cannot deserialize notification params:", err)
 	}
@@ -60,6 +68,10 @@ type ResCtx struct {
 // Result reads response result data into given object.
 // Object should be passed by reference.
 func (r *ResCtx) Result(v interface{}) {
+	if r.result == nil {
+		return
+	}
+
 	if err := json.Unmarshal(r.result, v); err != nil {
 		log.Fatalln("Cannot deserialize response result:", err)
 	}
