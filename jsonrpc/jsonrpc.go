@@ -3,6 +3,7 @@ package jsonrpc
 
 import (
 	"encoding/json"
+	"errors"
 	"log"
 
 	"github.com/nbusy/neptulon"
@@ -18,6 +19,10 @@ type Server struct {
 
 // NewServer creates a Neptulon JSON-RPC server.
 func NewServer(n *neptulon.Server) (*Server, error) {
+	if n == nil {
+		return nil, errors.New("Given Neptulon server instance is nil.")
+	}
+
 	s := Server{neptulon: n}
 	n.Middleware(s.neptulonMiddleware)
 	return &s, nil
