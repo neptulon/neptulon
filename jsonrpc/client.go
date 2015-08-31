@@ -30,8 +30,9 @@ func (c *Client) SetReadDeadline(seconds int) {
 }
 
 // ReadMsg reads a message off of a client connection and returns a request, response, or notification message depending on what server sent.
-// Optionally, you can pass in a data structure that the returned JSON-RPC response result data will be serialized into. Otherwise json.Unmarshal defaults apply.
-func (c *Client) ReadMsg(resultData interface{}) (req *Request, res *Response, not *Notification, err error) {
+// Optionally, you can pass in a data structure that the returned JSON-RPC response result data will be serialized into (same for request params).
+// Otherwise json.Unmarshal defaults apply.
+func (c *Client) ReadMsg(resultData interface{}, paramsData interface{}) (req *Request, res *Response, not *Notification, err error) {
 	var data []byte
 	if data, err = c.conn.Read(); err != nil {
 		return
@@ -46,7 +47,16 @@ func (c *Client) ReadMsg(resultData interface{}) (req *Request, res *Response, n
 	if msg.ID != "" {
 		// if incoming message is a request
 		if msg.Method != "" {
-			req = &Request{ID: msg.ID, Method: msg.Method, Params: msg.Params}
+			var p interface{}
+			if paramsData != nil {
+				p = paramsData
+			}
+
+			if err = json.Unmarshal(msg.Params, &p); err != nil {
+				return
+			}
+
+			req = &Request{ID: msg.ID, Method: msg.Method, Params: p}
 			return
 		}
 

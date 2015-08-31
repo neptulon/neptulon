@@ -37,7 +37,7 @@ type ResError struct {
 type message struct {
 	ID     string          `json:"id,omitempty"`
 	Method string          `json:"method,omitempty"`
-	Params json.RawMessage `json:"params,omitempty"`
-	Result json.RawMessage `json:"result,omitempty"`
-	Error  *ResError       `json:"error,omitempty"`
+	Params json.RawMessage `json:"params,omitempty"` // request params
+	Result json.RawMessage `json:"result,omitempty"` // response result
+	Error  *ResError       `json:"error,omitempty"`  // response error
 }

@@ -2,7 +2,7 @@ package jsonrpc
 
 import "github.com/nbusy/neptulon"
 
-// ReqContext encapsulates connection, request, and reponse objects for a request.
+// ReqContext encapsulates connection, request, and reponse objects.
 type ReqContext struct {
 	Conn   *neptulon.Conn
 	Req    *Request

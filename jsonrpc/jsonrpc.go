@@ -61,7 +61,13 @@ func (a *App) neptulonMiddleware(conn *neptulon.Conn, msg []byte) []byte {
 	if m.ID != "" {
 		// if incoming message is a request
 		if m.Method != "" {
-			ctx := ReqContext{Conn: conn, Req: &Request{ID: m.ID, Method: m.Method, Params: m.Params}}
+			ctx := ReqContext{Conn: conn, Req: &Request{ID: m.ID, Method: m.Method}}
+			if m.Params != nil {
+				if err := json.Unmarshal(m.Params, &ctx.Req.Params); err != nil {
+					log.Fatalln("Cannot deserialize incoming request params:", err)
+				}
+			}
+
 			for _, mid := range a.reqMiddleware {
 				mid(&ctx)
 				if ctx.Done || ctx.Res != nil || ctx.ResErr != nil {
@@ -82,7 +88,13 @@ func (a *App) neptulonMiddleware(conn *neptulon.Conn, msg []byte) []byte {
 		}
 
 		// if incoming message is a response
-		ctx := ResContext{Conn: conn, Res: &Response{ID: m.ID, Result: m.Result, Error: m.Error}}
+		ctx := ResContext{Conn: conn, Res: &Response{ID: m.ID, Error: m.Error}}
+		if m.Result != nil {
+			if err := json.Unmarshal(m.Result, &ctx.Res.Result); err != nil {
+				log.Fatalln("Cannot deserialize incoming response result:", err)
+			}
+		}
+
 		for _, mid := range a.resMiddleware {
 			mid(&ctx)
 			if ctx.Done {
