@@ -24,8 +24,7 @@ func NewRouter(app *App) (*Router, error) {
 }
 
 // Request adds a new incoming request route registry.
-// Optionally, you can pass in a data structure that the returned JSON-RPC response result data will be serialized into. Otherwise json.Unmarshal defaults apply.
-func (r *Router) Request(route string, resultData interface{}, handler func(ctx *ReqContext)) {
+func (r *Router) Request(route string, handler func(ctx *ReqContext)) {
 	r.reqRoutes[route] = handler
 }
 
@@ -35,8 +34,7 @@ func (r *Router) Notification(route string, handler func(ctx *NotContext)) {
 }
 
 // SendRequest sends a JSON-RPC request throught the connection denoted by the connection ID.
-// Optionally, you can pass in a data structure that the returned JSON-RPC response result data will be serialized into. Otherwise json.Unmarshal defaults apply.
-func (r *Router) SendRequest(connID string, resultData interface{}, req *Request) chan<- *Response {
+func (r *Router) SendRequest(connID string, req *Request) chan<- *Response {
 	r.jsonrpc.Send(connID, req)
 	ch := make(chan *Response)
 	r.pendinRequests[req.ID] = ch
