@@ -18,14 +18,14 @@ type Server struct {
 }
 
 // NewServer creates a Neptulon JSON-RPC server.
-func NewServer(n *neptulon.Server) (*Server, error) {
-	if n == nil {
+func NewServer(s *neptulon.Server) (*Server, error) {
+	if s == nil {
 		return nil, errors.New("Given Neptulon server instance is nil.")
 	}
 
-	s := Server{neptulon: n}
-	n.Middleware(s.neptulonMiddleware)
-	return &s, nil
+	rpc := Server{neptulon: s}
+	s.Middleware(rpc.neptulonMiddleware)
+	return &rpc, nil
 }
 
 // ReqMiddleware registers a new request middleware to handle incoming requests.

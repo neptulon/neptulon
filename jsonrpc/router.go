@@ -1,5 +1,7 @@
 package jsonrpc
 
+import "errors"
+
 // Router is a JSON-RPC message routing middleware.
 type Router struct {
 	jsonrpc        *Server
@@ -10,6 +12,10 @@ type Router struct {
 
 // NewRouter creates a JSON-RPC router instance and registers it with the Neptulon JSON-RPC server.
 func NewRouter(s *Server) (*Router, error) {
+	if s == nil {
+		return nil, errors.New("Given Neptulon server instance is nil.")
+	}
+
 	r := Router{
 		jsonrpc:        s,
 		reqRoutes:      make(map[string]func(ctx *ReqCtx)),
