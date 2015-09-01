@@ -30,9 +30,11 @@ func NewServer(cert, privKey, clientCACert []byte, laddr string, debug bool) (*S
 	}
 
 	return &Server{
-		debug:    debug,
-		listener: l,
-		conns:    cmap.New(),
+		debug:         debug,
+		listener:      l,
+		conns:         cmap.New(),
+		handleConn:    func(conn *Conn) {},
+		handleDisconn: func(conn *Conn) {},
 	}, nil
 }
 
@@ -96,6 +98,7 @@ func (s *Server) Stop() error {
 func handleConn(s *Server) func(conn *Conn) {
 	return func(conn *Conn) {
 		s.conns.Set(conn.ID, conn)
+		s.handleConn(conn)
 	}
 }
 
@@ -119,5 +122,6 @@ func handleMsg(s *Server) func(conn *Conn, msg []byte) {
 func handleDisconn(s *Server) func(conn *Conn) {
 	return func(conn *Conn) {
 		s.conns.Delete(conn.ID)
+		s.handleDisconn(conn)
 	}
 }
