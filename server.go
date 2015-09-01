@@ -34,9 +34,19 @@ func NewServer(cert, privKey, clientCACert []byte, laddr string, debug bool) (*S
 	}, nil
 }
 
+// Conn registers a function to handle client connection events.
+func (s *Server) Conn(handler func(conn *Conn)) {
+	// or should this be in middleware with a special switch?
+}
+
 // Middleware registers a new middleware to handle incoming messages.
 func (s *Server) Middleware(middleware func(conn *Conn, msg []byte) []byte) {
 	s.middleware = append(s.middleware, middleware)
+}
+
+// Disconn registers a function to handle client disconnection events.
+func (s *Server) Disconn(handler func(conn *Conn)) {
+
 }
 
 // Run starts accepting connections on the internal listener and handles connections with registered middleware.
@@ -52,11 +62,6 @@ func (s *Server) Run() error {
 	s.errMutex.Unlock()
 
 	return err
-}
-
-// Disconn registers a function to handle client disconnection.
-func (s *Server) Disconn(handler func(conn *Conn)) {
-
 }
 
 // Send sends a message throught the connection denoted by the connection ID.
