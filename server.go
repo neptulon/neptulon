@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"sync"
+
+	"github.com/nbusy/cmap"
 )
 
 // Server is a Neptulon server.
@@ -14,7 +16,7 @@ type Server struct {
 	errMutex   sync.RWMutex
 	listener   *Listener
 	middleware []func(conn *Conn, msg []byte) []byte
-	conns      map[string]*Conn
+	conns      *cmap.CMap // conn ID -> *Conn
 }
 
 // NewServer creates a Neptulon server. This is the default TLS constructor.
@@ -28,7 +30,7 @@ func NewServer(cert, privKey, clientCACert []byte, laddr string, debug bool) (*S
 	return &Server{
 		debug:    debug,
 		listener: l,
-		conns:    make(map[string]*Conn),
+		conns:    cmap.New(),
 	}, nil
 }
 
@@ -59,7 +61,11 @@ func (s *Server) Disconn(handler func(conn *Conn)) {
 
 // Send sends a message throught the connection denoted by the connection ID.
 func (s *Server) Send(connID string, msg []byte) error {
-	return s.conns[connID].Write(msg)
+	if conn, ok := s.conns.Get(connID); ok {
+		return conn.(*Conn).Write(msg)
+	}
+
+	return fmt.Errorf("Connection ID not found: %v", connID)
 }
 
 // Stop stops a server instance.
@@ -68,13 +74,13 @@ func (s *Server) Stop() error {
 
 	// close all active connections discarding any read/writes that is going on currently
 	// this is not a problem as we always require an ACK but it will also mean that message deliveries will be at-least-once; to-and-from the server
-	for _, conn := range s.conns {
-		conn.Close()
-	}
+	s.conns.Range(func(conn interface{}) {
+		conn.(*Conn).Close()
+	})
 
 	s.errMutex.RLock()
 	if s.err != nil {
-		return fmt.Errorf("Past internal error: %v", s.err)
+		return fmt.Errorf("There was a recorded internal error before closing the connection: %v", s.err)
 	}
 	s.errMutex.RUnlock()
 	return err
@@ -82,7 +88,7 @@ func (s *Server) Stop() error {
 
 func handleConn(s *Server) func(conn *Conn) {
 	return func(conn *Conn) {
-		s.conns[conn.ID] = conn
+		s.conns.Set(conn.ID, conn)
 	}
 }
 
@@ -105,6 +111,6 @@ func handleMsg(s *Server) func(conn *Conn, msg []byte) {
 
 func handleDisconn(s *Server) func(conn *Conn) {
 	return func(conn *Conn) {
-		delete(s.conns, conn.ID)
+		s.conns.Delete(conn.ID)
 	}
 }
