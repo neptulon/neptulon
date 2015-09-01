@@ -15,7 +15,6 @@ type Server struct {
 	listener   *Listener
 	middleware []func(conn *Conn, msg []byte) []byte
 	conns      map[string]*Conn
-	connMutex  sync.Mutex
 }
 
 // NewServer creates a Neptulon server. This is the default TLS constructor.
@@ -53,6 +52,11 @@ func (s *Server) Run() error {
 	return err
 }
 
+// Disconn registers a function to handle client disconnection.
+func (s *Server) Disconn(handler func(conn *Conn)) {
+
+}
+
 // Send sends a message throught the connection denoted by the connection ID.
 func (s *Server) Send(connID string, msg []byte) error {
 	return s.conns[connID].Write(msg)
@@ -64,11 +68,9 @@ func (s *Server) Stop() error {
 
 	// close all active connections discarding any read/writes that is going on currently
 	// this is not a problem as we always require an ACK but it will also mean that message deliveries will be at-least-once; to-and-from the server
-	s.connMutex.Lock()
 	for _, conn := range s.conns {
 		conn.Close()
 	}
-	s.connMutex.Unlock()
 
 	s.errMutex.RLock()
 	if s.err != nil {
@@ -80,9 +82,7 @@ func (s *Server) Stop() error {
 
 func handleConn(s *Server) func(conn *Conn) {
 	return func(conn *Conn) {
-		s.connMutex.Lock()
 		s.conns[conn.ID] = conn
-		s.connMutex.Unlock()
 	}
 }
 
@@ -105,8 +105,6 @@ func handleMsg(s *Server) func(conn *Conn, msg []byte) {
 
 func handleDisconn(s *Server) func(conn *Conn) {
 	return func(conn *Conn) {
-		s.connMutex.Lock()
 		delete(s.conns, conn.ID)
-		s.connMutex.Unlock()
 	}
 }
