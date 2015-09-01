@@ -11,12 +11,14 @@ import (
 
 // Server is a Neptulon server.
 type Server struct {
-	debug      bool
-	err        error
-	errMutex   sync.RWMutex
-	listener   *Listener
-	middleware []func(conn *Conn, msg []byte) []byte
-	conns      *cmap.CMap // conn ID -> *Conn
+	debug         bool
+	err           error
+	errMutex      sync.RWMutex
+	listener      *Listener
+	middleware    []func(conn *Conn, msg []byte) []byte
+	conns         *cmap.CMap // conn ID -> *Conn
+	handleConn    func(conn *Conn)
+	handleDisconn func(conn *Conn)
 }
 
 // NewServer creates a Neptulon server. This is the default TLS constructor.
@@ -36,7 +38,7 @@ func NewServer(cert, privKey, clientCACert []byte, laddr string, debug bool) (*S
 
 // Conn registers a function to handle client connection events.
 func (s *Server) Conn(handler func(conn *Conn)) {
-	// or should this be in middleware with a special switch?
+	s.handleConn = handler
 }
 
 // Middleware registers a new middleware to handle incoming messages.
@@ -46,7 +48,7 @@ func (s *Server) Middleware(middleware func(conn *Conn, msg []byte) []byte) {
 
 // Disconn registers a function to handle client disconnection events.
 func (s *Server) Disconn(handler func(conn *Conn)) {
-
+	s.handleDisconn = handler
 }
 
 // Run starts accepting connections on the internal listener and handles connections with registered middleware.
