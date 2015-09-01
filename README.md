@@ -12,18 +12,18 @@ Example
 
 Following example creates a TLS listener with JSON-RPC 2.0 protocol and starts listening for 'ping' requests and replies with a typical 'pong'.
 
-// todo: move json-rpc example into its own readme and example_test.go files and link them from here and replace below one with a simple byte ping/pong and a separate sender example
-
 ```go
-nep, _ := neptulon.NewApp(cert, privKey, nil, "127.0.0.1:3000", true)
-rpc, _ := jsonrpc.NewApp(nep)
+nep, _ := neptulon.NewServer(cert, privKey, nil, "127.0.0.1:3000", true)
+rpc, _ := jsonrpc.NewServer(nep)
 route, _ := jsonrpc.NewRouter(rpc)
 
-route.Request("ping", func(ctx *jsonrpc.ReqContext) {
+route.Request("ping", func(ctx *jsonrpc.ReqCtx) {
 	ctx.Res = "pong"
 })
 
 nep.Run()
+
+// todo: move json-rpc example into its own readme and example_test.go files and link them from here and replace below one with a simple byte ping/pong and a separate sender example
 ```
 
 Testing
