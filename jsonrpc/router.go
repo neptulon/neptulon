@@ -4,10 +4,10 @@ import "errors"
 
 // Router is a JSON-RPC message routing middleware.
 type Router struct {
-	jsonrpc        *Server
-	reqRoutes      map[string]func(ctx *ReqCtx)
-	notRoutes      map[string]func(ctx *NotCtx)
-	pendinRequests map[string]chan *ResCtx // requests sent from the router that are pending responses from clients
+	jsonrpc   *Server
+	reqRoutes map[string]func(ctx *ReqCtx) // method name -> handler
+	notRoutes map[string]func(ctx *NotCtx) // method name -> handler
+	resRoutes map[string]func(ctx *ResCtx) // message ID -> handler : requests sent from the router that are pending responses from clients
 }
 
 // NewRouter creates a JSON-RPC router instance and registers it with the Neptulon JSON-RPC server.
@@ -17,10 +17,10 @@ func NewRouter(s *Server) (*Router, error) {
 	}
 
 	r := Router{
-		jsonrpc:        s,
-		reqRoutes:      make(map[string]func(ctx *ReqCtx)),
-		notRoutes:      make(map[string]func(ctx *NotCtx)),
-		pendinRequests: make(map[string]chan *ResCtx),
+		jsonrpc:   s,
+		reqRoutes: make(map[string]func(ctx *ReqCtx)),
+		notRoutes: make(map[string]func(ctx *NotCtx)),
+		resRoutes: make(map[string]func(ctx *ResCtx)),
 	}
 
 	s.ReqMiddleware(r.reqMiddleware)
@@ -40,11 +40,10 @@ func (r *Router) Notification(route string, handler func(ctx *NotCtx)) {
 }
 
 // SendRequest sends a JSON-RPC request throught the connection denoted by the connection ID.
-func (r *Router) SendRequest(connID string, req *Request) chan<- *ResCtx {
+// resHandler is called when a response is returned.
+func (r *Router) SendRequest(connID string, req *Request, resHandler func(ctx *ResCtx)) {
 	r.jsonrpc.Send(connID, req)
-	ch := make(chan *ResCtx)
-	r.pendinRequests[req.ID] = ch
-	return ch
+	r.resRoutes[req.ID] = resHandler
 }
 
 // SendNotification sends a JSON-RPC notification through the connection denoted by the connection ID.
@@ -65,8 +64,8 @@ func (r *Router) notMiddleware(ctx *NotCtx) {
 }
 
 func (r *Router) resMiddleware(ctx *ResCtx) {
-	if ch, ok := r.pendinRequests[ctx.id]; ok {
-		ch <- ctx
-		delete(r.pendinRequests, ctx.id)
+	if handler, ok := r.resRoutes[ctx.id]; ok {
+		handler(ctx)
+		delete(r.resRoutes, ctx.id)
 	}
 }
