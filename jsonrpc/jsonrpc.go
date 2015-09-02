@@ -4,6 +4,7 @@ package jsonrpc
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 
 	"github.com/nbusy/neptulon"
@@ -43,17 +44,19 @@ func (s *Server) ResMiddleware(resMiddleware func(ctx *ResCtx)) {
 	s.resMiddleware = append(s.resMiddleware, resMiddleware)
 }
 
-// Send sends a message throught the connection denoted by the connection ID.
-func (s *Server) Send(connID string, msg interface{}) {
+// send sends a message throught the connection denoted by the connection ID.
+func (s *Server) send(connID string, msg interface{}) error {
 	data, err := json.Marshal(msg)
 	if err != nil {
-		log.Fatalln("Errored while serializing JSON-RPC response:", err)
+		return fmt.Errorf("Errored while serializing JSON-RPC message: %v", err)
 	}
 
 	err = s.neptulon.Send(connID, data)
 	if err != nil {
-		log.Fatalln("Errored while sending JSON-RPC message:", err)
+		return fmt.Errorf("Errored while sending JSON-RPC message: %v", err)
 	}
+
+	return nil
 }
 
 func (s *Server) neptulonMiddleware(conn *neptulon.Conn, msg []byte) []byte {

@@ -1,6 +1,10 @@
 package jsonrpc
 
-import "errors"
+import (
+	"errors"
+
+	"github.com/nbusy/neptulon"
+)
 
 // Router is a JSON-RPC message routing middleware.
 type Router struct {
@@ -41,14 +45,24 @@ func (r *Router) Notification(route string, handler func(ctx *NotCtx)) {
 
 // SendRequest sends a JSON-RPC request throught the connection denoted by the connection ID.
 // resHandler is called when a response is returned.
-func (r *Router) SendRequest(connID string, req *Request, resHandler func(ctx *ResCtx)) {
-	r.jsonrpc.Send(connID, req)
+func (r *Router) SendRequest(connID string, method string, params interface{}, resHandler func(ctx *ResCtx)) error {
+	id, err := neptulon.GenID()
+	if err != nil {
+		return err
+	}
+
+	req := Request{ID: id, Method: method, Params: params}
+	if err = r.jsonrpc.send(connID, req); err != nil {
+		return err
+	}
+
 	r.resRoutes[req.ID] = resHandler
+	return nil
 }
 
 // SendNotification sends a JSON-RPC notification through the connection denoted by the connection ID.
-func (r *Router) SendNotification(connID string, not *Notification) {
-	r.jsonrpc.Send(connID, not)
+func (r *Router) SendNotification(connID string, method string, params interface{}) error {
+	return r.jsonrpc.send(connID, Notification{Method: method, Params: params})
 }
 
 func (r *Router) reqMiddleware(ctx *ReqCtx) {
