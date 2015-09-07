@@ -10,7 +10,7 @@ Framework core is a small ~1000 SLOC codebase which makes it easy to fork, speci
 TLS Only
 --------
 
-Currently we only support TLS for communication. Raw TCP/UDP and DTLS support will be added in future iterations.
+Currently we only support TLS for communication. Raw TCP/UDP and DTLS support is planned for future iterations.
 
 JSON-RPC 2.0
 ------------
