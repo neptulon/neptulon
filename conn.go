@@ -10,12 +10,14 @@ import (
 	"log"
 	"net"
 	"time"
+
+	"github.com/nbusy/cmap"
 )
 
 // Conn is a client connection.
 type Conn struct {
-	ID                 string // Randomly generated unique connection ID
-	Session            *Session
+	ID                 string     // Randomly generated unique connection ID
+	Data               *cmap.CMap // Thread-safe data store for storing arbitrary data for this connection session
 	conn               *tls.Conn
 	headerSize         int
 	maxMsgSize         int
@@ -39,14 +41,14 @@ func NewConn(conn *tls.Conn, headerSize, maxMsgSize, readDeadline int, debug boo
 		readDeadline = 300
 	}
 
-	id, err := GenUID()
+	id, err := GenID()
 	if err != nil {
 		return nil, err
 	}
 
 	return &Conn{
 		ID:           id,
-		Session:      NewSession(),
+		Data:         cmap.New(),
 		conn:         conn,
 		headerSize:   headerSize,
 		maxMsgSize:   maxMsgSize,
@@ -96,13 +98,14 @@ func (c *Conn) SetReadDeadline(seconds int) {
 }
 
 // Read waits for and reads the next incoming message from the TLS connection.
-func (c *Conn) Read() (n int, msg []byte, err error) {
+func (c *Conn) Read() (msg []byte, err error) {
 	if err = c.conn.SetReadDeadline(time.Now().Add(c.readDeadline)); err != nil {
 		return
 	}
 
 	// read the content length header
 	h := make([]byte, c.headerSize)
+	var n int
 	n, err = c.conn.Read(h)
 	if err != nil {
 		return
@@ -139,14 +142,14 @@ func (c *Conn) Read() (n int, msg []byte, err error) {
 }
 
 // Write writes given message to the connection.
-func (c *Conn) Write(msg []byte) (n int, err error) {
+func (c *Conn) Write(msg []byte) error {
 	l := len(msg)
 	h := makeHeaderBytes(l, c.headerSize)
 
 	// write the header
-	n, err = c.conn.Write(h)
+	n, err := c.conn.Write(h)
 	if err != nil {
-		return
+		return err
 	}
 	if n != c.headerSize {
 		err = fmt.Errorf("expected to write %v bytes but only wrote %v bytes", l, n)
@@ -156,13 +159,13 @@ func (c *Conn) Write(msg []byte) (n int, err error) {
 	// todo: do we need a loop? bufio uses a loop but it might be due to buff length limitation
 	n, err = c.conn.Write(msg)
 	if err != nil {
-		return
+		return err
 	}
 	if n != l {
 		err = fmt.Errorf("expected to write %v bytes but only wrote %v bytes", l, n)
 	}
 
-	return
+	return nil
 }
 
 // RemoteAddr returns the remote network address.

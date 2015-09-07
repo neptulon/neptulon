@@ -3,55 +3,63 @@ package jsonrpc
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"log"
 
 	"github.com/nbusy/neptulon"
 )
 
-// App is a Neptulon JSON-RPC app.
-type App struct {
-	neptulon      *neptulon.App
-	reqMiddleware []func(ctx *ReqContext)
-	notMiddleware []func(ctx *NotContext)
-	resMiddleware []func(ctx *ResContext)
+// Server is a Neptulon JSON-RPC server.
+type Server struct {
+	neptulon      *neptulon.Server
+	reqMiddleware []func(ctx *ReqCtx)
+	notMiddleware []func(ctx *NotCtx)
+	resMiddleware []func(ctx *ResCtx)
 }
 
-// NewApp creates a Neptulon JSON-RPC app.
-func NewApp(n *neptulon.App) (*App, error) {
-	a := App{neptulon: n}
-	n.Middleware(a.neptulonMiddleware)
-	return &a, nil
+// NewServer creates a Neptulon JSON-RPC server.
+func NewServer(s *neptulon.Server) (*Server, error) {
+	if s == nil {
+		return nil, errors.New("Given Neptulon server instance is nil.")
+	}
+
+	rpc := Server{neptulon: s}
+	s.Middleware(rpc.neptulonMiddleware)
+	return &rpc, nil
 }
 
 // ReqMiddleware registers a new request middleware to handle incoming requests.
-func (a *App) ReqMiddleware(reqMiddleware func(ctx *ReqContext)) {
-	a.reqMiddleware = append(a.reqMiddleware, reqMiddleware)
+func (s *Server) ReqMiddleware(reqMiddleware func(ctx *ReqCtx)) {
+	s.reqMiddleware = append(s.reqMiddleware, reqMiddleware)
 }
 
 // NotMiddleware registers a new notification middleware to handle incoming notifications.
-func (a *App) NotMiddleware(notMiddleware func(ctx *NotContext)) {
-	a.notMiddleware = append(a.notMiddleware, notMiddleware)
+func (s *Server) NotMiddleware(notMiddleware func(ctx *NotCtx)) {
+	s.notMiddleware = append(s.notMiddleware, notMiddleware)
 }
 
 // ResMiddleware registers a new response middleware to handle incoming responses.
-func (a *App) ResMiddleware(resMiddleware func(ctx *ResContext)) {
-	a.resMiddleware = append(a.resMiddleware, resMiddleware)
+func (s *Server) ResMiddleware(resMiddleware func(ctx *ResCtx)) {
+	s.resMiddleware = append(s.resMiddleware, resMiddleware)
 }
 
-// Send sends a message throught the connection denoted by the connection ID.
-func (a *App) Send(connID string, msg interface{}) {
+// send sends a message throught the connection denoted by the connection ID.
+func (s *Server) send(connID string, msg interface{}) error {
 	data, err := json.Marshal(msg)
 	if err != nil {
-		log.Fatalln("Errored while serializing JSON-RPC response:", err)
+		return fmt.Errorf("Errored while serializing JSON-RPC message: %v", err)
 	}
 
-	err = a.neptulon.Send(connID, data)
+	err = s.neptulon.Send(connID, data)
 	if err != nil {
-		log.Fatalln("Errored sending JSON-RPC message:", err)
+		return fmt.Errorf("Errored while sending JSON-RPC message: %v", err)
 	}
+
+	return nil
 }
 
-func (a *App) neptulonMiddleware(conn *neptulon.Conn, msg []byte) []byte {
+func (s *Server) neptulonMiddleware(conn *neptulon.Conn, msg []byte) []byte {
 	var m message
 	if err := json.Unmarshal(msg, &m); err != nil {
 		log.Fatalln("Cannot deserialize incoming message:", err)
@@ -61,16 +69,16 @@ func (a *App) neptulonMiddleware(conn *neptulon.Conn, msg []byte) []byte {
 	if m.ID != "" {
 		// if incoming message is a request
 		if m.Method != "" {
-			ctx := ReqContext{Conn: conn, Req: &Request{ID: m.ID, Method: m.Method, Params: m.Params}}
-			for _, mid := range a.reqMiddleware {
+			ctx := ReqCtx{Conn: conn, id: m.ID, method: m.Method, params: m.Params}
+			for _, mid := range s.reqMiddleware {
 				mid(&ctx)
-				if ctx.Done || ctx.Res != nil || ctx.ResErr != nil {
+				if ctx.Done || ctx.Res != nil || ctx.Err != nil {
 					break
 				}
 			}
 
-			if ctx.Res != nil || ctx.ResErr != nil {
-				data, err := json.Marshal(Response{ID: m.ID, Result: ctx.Res, Error: ctx.ResErr})
+			if ctx.Res != nil || ctx.Err != nil {
+				data, err := json.Marshal(Response{ID: m.ID, Result: ctx.Res, Error: ctx.Err})
 				if err != nil {
 					log.Fatalln("Errored while serializing JSON-RPC response:", err)
 				}
@@ -82,8 +90,8 @@ func (a *App) neptulonMiddleware(conn *neptulon.Conn, msg []byte) []byte {
 		}
 
 		// if incoming message is a response
-		ctx := ResContext{Conn: conn, Res: &Response{ID: m.ID, Result: m.Result, Error: m.Error}}
-		for _, mid := range a.resMiddleware {
+		ctx := ResCtx{Conn: conn, id: m.ID, result: m.Result, code: m.Error.Code, message: m.Error.Message, data: m.Error.Data}
+		for _, mid := range s.resMiddleware {
 			mid(&ctx)
 			if ctx.Done {
 				break
@@ -95,8 +103,8 @@ func (a *App) neptulonMiddleware(conn *neptulon.Conn, msg []byte) []byte {
 
 	// if incoming message is a notification
 	if m.Method != "" {
-		ctx := NotContext{Conn: conn, Not: &Notification{Method: m.Method, Params: m.Params}}
-		for _, mid := range a.notMiddleware {
+		ctx := NotCtx{Conn: conn, method: m.Method, params: m.Params}
+		for _, mid := range s.notMiddleware {
 			mid(&ctx)
 			if ctx.Done {
 				break

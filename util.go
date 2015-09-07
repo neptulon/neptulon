@@ -7,8 +7,8 @@ import (
 	"time"
 )
 
-// GenUID generates a unique ID using crypto/rand in the form of "m-96bitBase16" and total of 26 characters long (i.e. m-18dc2ae3898820d9c5df4f38).
-func GenUID() (string, error) {
+// GenID generates a unique ID using crypto/rand in the form of "m-96bitBase16" and total of 26 characters long (i.e. m-18dc2ae3898820d9c5df4f38).
+func GenID() (string, error) {
 	// todo: we can use sequential numbers optionally, just as the Android client does (1, 2, 3..) in upstream messages
 	b := make([]byte, 12)
 	if _, err := rand.Read(b); err != nil {

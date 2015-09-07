@@ -30,14 +30,15 @@ func (c *Client) SetReadDeadline(seconds int) {
 }
 
 // ReadMsg reads a message off of a client connection and returns a request, response, or notification message depending on what server sent.
-// Optionally, you can pass in a data structure that the returned JSON-RPC response result data will be serialized into. Otherwise the response result data will be a map.
-func (c *Client) ReadMsg(resultData interface{}) (req *Request, res *Response, not *Notification, err error) {
-	_, data, err := c.conn.Read()
-	if err != nil {
+// Optionally, you can pass in a data structure that the returned JSON-RPC response result data will be serialized into (same for request params).
+// Otherwise json.Unmarshal defaults apply.
+func (c *Client) ReadMsg(resultData interface{}, paramsData interface{}) (req *Request, res *Response, not *Notification, err error) {
+	var data []byte
+	if data, err = c.conn.Read(); err != nil {
 		return
 	}
 
-	msg := message{Result: resultData}
+	msg := message{}
 	if err = json.Unmarshal(data, &msg); err != nil {
 		return
 	}
@@ -46,12 +47,39 @@ func (c *Client) ReadMsg(resultData interface{}) (req *Request, res *Response, n
 	if msg.ID != "" {
 		// if incoming message is a request
 		if msg.Method != "" {
-			req = &Request{ID: msg.ID, Method: msg.Method, Params: msg.Params}
+			var p interface{}
+			if paramsData != nil {
+				p = paramsData
+			}
+
+			if err = json.Unmarshal(msg.Params, &p); err != nil {
+				return
+			}
+
+			req = &Request{ID: msg.ID, Method: msg.Method, Params: p}
 			return
 		}
 
 		// if incoming message is a response
-		res = &Response{ID: msg.ID, Result: msg.Result, Error: msg.Error}
+		var r interface{}
+		if resultData != nil {
+			r = resultData
+		}
+
+		if msg.Result != nil {
+			if err = json.Unmarshal(msg.Result, &r); err != nil {
+				return
+			}
+		}
+
+		res = &Response{ID: msg.ID, Result: r}
+		if msg.Error != nil {
+			res.Error = &ResError{Code: msg.Error.Code, Message: msg.Error.Message}
+			if err = json.Unmarshal(msg.Error.Data, &res.Error.Data); err != nil {
+				return
+			}
+		}
+
 		return
 	}
 
@@ -64,9 +92,9 @@ func (c *Client) ReadMsg(resultData interface{}) (req *Request, res *Response, n
 	return
 }
 
-// WriteRequest writes a JSON-RPC request to a client connection with structured params object and auto generated request ID.
+// WriteRequest writes a JSON-RPC request message to a client connection with structured params object and auto generated request ID.
 func (c *Client) WriteRequest(method string, params interface{}) (reqID string, err error) {
-	id, err := neptulon.GenUID()
+	id, err := neptulon.GenID()
 	if err != nil {
 		return "", err
 	}
@@ -74,14 +102,19 @@ func (c *Client) WriteRequest(method string, params interface{}) (reqID string, 
 	return id, c.WriteMsg(Request{ID: id, Method: method, Params: params})
 }
 
-// WriteRequestArr writes a JSON-RPC request to a client connection with array params and auto generated request ID.
+// WriteRequestArr writes a JSON-RPC request message to a client connection with array params and auto generated request ID.
 func (c *Client) WriteRequestArr(method string, params ...interface{}) (reqID string, err error) {
-	id, err := neptulon.GenUID()
-	if err != nil {
-		return "", err
-	}
+	return c.WriteRequest(method, params)
+}
 
-	return id, c.WriteMsg(Request{ID: id, Method: method, Params: params})
+// WriteNotification writes a JSON-RPC notification message to a client connection with structured params object.
+func (c *Client) WriteNotification(method string, params interface{}) error {
+	return c.WriteMsg(Notification{Method: method, Params: params})
+}
+
+// WriteNotificationArr writes a JSON-RPC notification message to a client connection with array params.
+func (c *Client) WriteNotificationArr(method string, params ...interface{}) error {
+	return c.WriteNotification(method, params)
 }
 
 // WriteMsg writes any JSON-RPC message to a client connection.
@@ -91,7 +124,7 @@ func (c *Client) WriteMsg(msg interface{}) error {
 		return err
 	}
 
-	if _, err := c.conn.Write(data); err != nil {
+	if err := c.conn.Write(data); err != nil {
 		return err
 	}
 
