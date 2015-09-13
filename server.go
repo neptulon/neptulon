@@ -70,7 +70,7 @@ func (s *Server) Run() error {
 
 // Send sends a message throught the connection denoted by the connection ID.
 func (s *Server) Send(connID string, msg []byte) error {
-	if conn, ok := s.conns.Get(connID); ok {
+	if conn, ok := s.conns.GetOk(connID); ok {
 		return conn.(*Conn).Write(msg)
 	}
 
