@@ -90,7 +90,7 @@ func (s *Server) neptulonMiddleware(conn *neptulon.Conn, msg []byte) []byte {
 		}
 
 		// if incoming message is a response
-		ctx := ResCtx{Conn: conn, id: m.ID, result: m.Result, code: m.Error.Code, message: m.Error.Message, data: m.Error.Data}
+		ctx := ResCtx{Conn: conn, id: m.ID, result: m.Result, err: m.Error}
 		for _, mid := range s.resMiddleware {
 			mid(&ctx)
 			if ctx.Done {

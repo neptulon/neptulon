@@ -60,9 +60,7 @@ type ResCtx struct {
 	id     string          // message ID
 	result json.RawMessage // result parameters
 
-	code    int             // error code
-	message string          // error message
-	data    json.RawMessage // error data
+	err *resError // response error (if any)
 }
 
 // Result reads response result data into given object.
