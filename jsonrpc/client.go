@@ -118,6 +118,11 @@ func (c *Client) WriteNotificationArr(method string, params ...interface{}) erro
 	return c.WriteNotification(method, params)
 }
 
+// WriteResponse writes a JSON-RPC response message to a client connection.
+func (c *Client) WriteResponse(id string, result interface{}, err *ResError) error {
+	return c.WriteMsg(Response{ID: id, Result: result, Error: err})
+}
+
 // WriteMsg writes any JSON-RPC message to a client connection.
 func (c *Client) WriteMsg(msg interface{}) error {
 	data, err := json.Marshal(msg)
