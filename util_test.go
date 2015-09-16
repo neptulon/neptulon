@@ -21,8 +21,8 @@ func TestGenID(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Error while generating unique ID: %v", err)
 		}
-		if len(id) != 26 {
-			t.Fatalf("Expected a string of length 26 but got %v", len(id))
+		if len(id) != 24 {
+			t.Fatalf("Expected a string of length 24 but got %v", len(id))
 		}
 		if id[3] == id[4] && id[5] == id[6] && id[7] == id[8] && id[9] == id[10] {
 			t.Fatal("Expected a random string, got repeated characters")
