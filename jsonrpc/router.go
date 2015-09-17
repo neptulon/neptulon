@@ -3,15 +3,16 @@ package jsonrpc
 import (
 	"errors"
 
+	"github.com/nbusy/cmap"
 	"github.com/nbusy/neptulon"
 )
 
 // Router is a JSON-RPC message routing middleware.
 type Router struct {
 	jsonrpc   *Server
-	reqRoutes map[string]func(ctx *ReqCtx) // method name -> handler
-	notRoutes map[string]func(ctx *NotCtx) // method name -> handler
-	resRoutes map[string]func(ctx *ResCtx) // message ID -> handler : requests sent from the router that are pending responses from clients
+	reqRoutes map[string]func(ctx *ReqCtx) // method name -> handler func(ctx *ReqCtx)
+	notRoutes map[string]func(ctx *NotCtx) // method name -> handler func(ctx *NotCtx)
+	resRoutes *cmap.CMap                   // message ID (string) -> handler func(ctx *ResCtx) : requests sent from the router that are pending responses from clients
 }
 
 // NewRouter creates a JSON-RPC router instance and registers it with the Neptulon JSON-RPC server.
@@ -24,7 +25,7 @@ func NewRouter(s *Server) (*Router, error) {
 		jsonrpc:   s,
 		reqRoutes: make(map[string]func(ctx *ReqCtx)),
 		notRoutes: make(map[string]func(ctx *NotCtx)),
-		resRoutes: make(map[string]func(ctx *ResCtx)),
+		resRoutes: cmap.New(),
 	}
 
 	s.ReqMiddleware(r.reqMiddleware)
@@ -56,7 +57,7 @@ func (r *Router) SendRequest(connID string, method string, params interface{}, r
 		return err
 	}
 
-	r.resRoutes[req.ID] = resHandler
+	r.resRoutes.Set(req.ID, resHandler)
 	return nil
 }
 
@@ -78,8 +79,8 @@ func (r *Router) notMiddleware(ctx *NotCtx) {
 }
 
 func (r *Router) resMiddleware(ctx *ResCtx) {
-	if handler, ok := r.resRoutes[ctx.id]; ok {
-		handler(ctx)
-		delete(r.resRoutes, ctx.id)
+	if handler, ok := r.resRoutes.GetOk(ctx.id); ok {
+		handler.(func(ctx *ResCtx))(ctx)
+		r.resRoutes.Delete(ctx.id)
 	}
 }
