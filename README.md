@@ -5,7 +5,7 @@ Neptulon
 
 Neptulon is a socket framework with middleware support. Framework core is built on listener and context objects. Each message on each connection creates a context which is then passed on to the registered middleware for handling. Client server communication is full-duplex bidirectional.
 
-Framework core is a small ~1000 SLOC codebase which makes it easy to fork, specialize, and maintain for specific purposes, if you need to.
+Neptulon framework is only ~400 lines of code, which makes it easy to fork, specialize, and maintain for specific purposes, if you need to.
 
 TLS Only
 --------
