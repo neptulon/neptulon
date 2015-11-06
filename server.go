@@ -6,7 +6,7 @@ import (
 	"log"
 	"sync"
 
-	"github.com/nbusy/cmap"
+	"github.com/neptulon/cmap"
 )
 
 // Server is a Neptulon server.

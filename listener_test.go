@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/nbusy/ca"
+	"github.com/neptulon/ca"
 )
 
 func TestLen(t *testing.T) {

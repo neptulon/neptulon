@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/nbusy/neptulon"
+	"github.com/neptulon/neptulon"
 )
 
 // Server is a Neptulon JSON-RPC server.

@@ -3,8 +3,8 @@ package jsonrpc
 import (
 	"errors"
 
-	"github.com/nbusy/cmap"
-	"github.com/nbusy/neptulon"
+	"github.com/neptulon/cmap"
+	"github.com/neptulon/neptulon"
 )
 
 // Router is a JSON-RPC message routing middleware.

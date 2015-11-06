@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"log"
 
-	"github.com/nbusy/neptulon"
+	"github.com/neptulon/neptulon"
 )
 
 // ReqCtx encapsulates connection, request, and reponse objects.

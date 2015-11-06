@@ -11,7 +11,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/nbusy/cmap"
+	"github.com/neptulon/cmap"
 )
 
 // Conn is a client connection.

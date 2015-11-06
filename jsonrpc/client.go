@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 
-	"github.com/nbusy/neptulon"
+	"github.com/neptulon/neptulon"
 )
 
 // Client is a client implementation for JSON-RPC 2.0 protocol for Neptulon framework.
