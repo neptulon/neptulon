@@ -5,3 +5,6 @@ type Logger struct{}
 
 func perfLoggerMiddleware(conn *Conn, msg []byte) {
 }
+
+func requestResponseLoggerMiddleware(conn *Conn, msg []byte) {
+}
