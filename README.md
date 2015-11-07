@@ -13,7 +13,7 @@ Currently we only support TLS for communication. Raw TCP/UDP and DTLS support is
 
 ## JSON-RPC 2.0
 
-[neptulon/jsonrpc](jsonrpc) package contains JSON-RPC 2.0 implementation on top of Neptulon. You can see a basic example below.
+[jsonrpc](https://github.com/neptulon/jsonrpc) package contains JSON-RPC 2.0 implementation on top of Neptulon. You can see a basic example below.
 
 ## Example
 
