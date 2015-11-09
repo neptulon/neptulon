@@ -7,6 +7,18 @@ Neptulon is a socket framework with middleware support. Framework core is built 
 
 Neptulon framework is only ~400 lines of code, which makes it easy to fork, specialize, and maintain for specific purposes, if you need to.
 
+## Communication Protocols
+
+Neptulon is built for speed and massive scalability. For that reason, the protocol is very simple:
+
+```
++-------------------------------+---------+
+| 4 Bytes Header (payload size) | Payload |
++-------------------------------+---------+
+```
+
+This simplicity makes client writing a breeze. We also plan to add support for WebSocket protocol for Web clients.
+
 ## TLS Only
 
 Currently we only support TLS for communication. Raw TCP/UDP and DTLS support is planned for future iterations.
