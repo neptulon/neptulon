@@ -2,7 +2,7 @@ package neptulon_test
 
 const debug = false
 
-// Example demonstrating the Titan server.
+// Example demonstrating the Neptulon server.
 func Example() {
 
 	// ** Output: Server started
