@@ -24,7 +24,7 @@ type Conn struct {
 	readDeadline       time.Duration
 	debug              bool
 	err                error
-	clientDisconnected bool // Whether the client disconnected from server before server closed connection
+	clientDisconnected bool // hack: Whether the client disconnected from server before server closed connection
 }
 
 // NewConn creates a new server-side connection object.
