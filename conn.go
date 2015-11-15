@@ -14,7 +14,7 @@ import (
 	"github.com/neptulon/cmap"
 )
 
-// Conn is a client connection.
+// Conn is a full-duplex bidirectional client-server connection.
 type Conn struct {
 	ID                 string     // Randomly generated unique connection ID
 	Data               *cmap.CMap // Thread-safe data store for storing arbitrary data for this connection session
@@ -57,7 +57,7 @@ func NewConn(conn *tls.Conn, headerSize, maxMsgSize, readDeadline int, debug boo
 	}, nil
 }
 
-// Dial creates a new client side connection to a given network address with optional CA and/or a client certificate (PEM encoded X.509 cert/key).
+// Dial creates a new client side connection to a server at the given network address with optional CA and/or a client certificate (PEM encoded X.509 cert/key).
 // Debug mode logs all raw TCP communication.
 func Dial(addr string, ca []byte, clientCert []byte, clientCertKey []byte, debug bool) (*Conn, error) {
 	var cas *x509.CertPool
