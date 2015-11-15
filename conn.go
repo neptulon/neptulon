@@ -27,7 +27,7 @@ type Conn struct {
 	clientDisconnected bool // hack: Whether the client disconnected from server before server closed connection
 }
 
-// NewConn creates a new server-side connection object.
+// NewConn creates a new neptulon.Conn object which wraps a given tls.Conn object.
 // Default values for headerSize, maxMsgSize, and readDeadline are 4 bytes, 4294967295 bytes (4GB), and 300 seconds, respectively.
 // Debug mode logs all raw TCP communication.
 func NewConn(conn *tls.Conn, headerSize, maxMsgSize, readDeadline int, debug bool) (*Conn, error) {
