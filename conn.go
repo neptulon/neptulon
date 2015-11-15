@@ -158,7 +158,7 @@ func (c *Conn) Write(msg []byte) error {
 
 	// write the body
 	// todo: do we need a write loop? bufio uses a loop but it might be due to buff length limitation
-	// todo2: we might need a write loop according to this: http://linux.die.net/man/2/write
+	// todo2: we might need a write loop according to this: http://linux.die.net/man/2/write but I don't know how Go uses it internally
 	n, err = c.conn.Write(msg)
 	if err != nil {
 		return err
