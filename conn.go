@@ -57,7 +57,8 @@ func NewConn(conn *tls.Conn, headerSize, maxMsgSize, readDeadline int, debug boo
 	}, nil
 }
 
-// Dial creates a new client side connection to a server at the given network address with optional CA and/or a client certificate (PEM encoded X.509 cert/key).
+// Dial creates a new client side connection to a server at the given network address,
+// with optional CA and/or a client certificate (PEM encoded X.509 cert/key).
 // Debug mode logs all raw TCP communication.
 func Dial(addr string, ca []byte, clientCert []byte, clientCertKey []byte, debug bool) (*Conn, error) {
 	var cas *x509.CertPool
