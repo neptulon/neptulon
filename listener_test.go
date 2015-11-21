@@ -39,15 +39,15 @@ func TestListener(t *testing.T) {
 	listenerWG.Add(1)
 	go func() {
 		defer listenerWG.Done()
-		l.Accept(func(conn *Conn) {},
-			func(conn *Conn, msg []byte) {
+		l.Accept(func(conn Conn) {},
+			func(conn Conn, msg []byte) {
 				m := string(msg)
 				if m == "close" {
 					conn.Close()
 					return
 				}
 
-				certs := conn.ConnectionState().PeerCertificates
+				certs := conn.(*TLSConn).ConnectionState().PeerCertificates
 				if len(certs) > 0 {
 					t.Logf("Client connected with client certificate subject: %v\n", certs[0].Subject)
 				}
@@ -55,7 +55,7 @@ func TestListener(t *testing.T) {
 				if m != msg1 && m != msg2 && m != msg3 && m != msg4 && m != msg5 {
 					t.Fatal("Sent and incoming messages did not match! Sent message was message:", m)
 				}
-			}, func(conn *Conn) {})
+			}, func(conn Conn) {})
 	}()
 
 	roots := x509.NewCertPool()
@@ -70,7 +70,7 @@ func TestListener(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	newconn, _ := NewConn(conn, 0, 0, 0, false)
+	newconn, _ := NewTLSConn(conn, 0, 0, 0, false)
 
 	send(t, newconn, msg1)
 	send(t, newconn, msg1)
@@ -109,7 +109,7 @@ func TestListener(t *testing.T) {
 // 	wg.Wait()
 // }
 
-func send(t *testing.T, conn *Conn, msg string) {
+func send(t *testing.T, conn Conn, msg string) {
 	data := []byte(msg)
 	n := len(data)
 

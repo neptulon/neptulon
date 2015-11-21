@@ -66,7 +66,7 @@ func (l *Listener) SetReadDeadline(seconds int) {
 
 // Accept waits for incoming connections and forwards the client connect/message/disconnect events to provided handlers in a new goroutine.
 // This function blocks and never returns, unless there is an error while accepting a new connection.
-func (l *Listener) Accept(handleConn func(conn *Conn), handleMsg func(conn *Conn, msg []byte), handleDisconn func(conn *Conn)) error {
+func (l *Listener) Accept(handleConn func(conn Conn), handleMsg func(conn Conn, msg []byte), handleDisconn func(conn Conn)) error {
 	defer log.Println("Listener closed:", l.listener.Addr())
 	for {
 		conn, err := l.listener.Accept()
@@ -89,7 +89,7 @@ func (l *Listener) Accept(handleConn func(conn *Conn), handleMsg func(conn *Conn
 		l.connWG.Add(1)
 		log.Println("Client connected:", conn.RemoteAddr())
 
-		c, err := NewConn(tlsconn, 0, 0, l.readDeadline, l.debug)
+		c, err := NewTLSConn(tlsconn, 0, 0, l.readDeadline, l.debug)
 		if err != nil {
 			return err
 		}
@@ -101,33 +101,34 @@ func (l *Listener) Accept(handleConn func(conn *Conn), handleMsg func(conn *Conn
 // handleClient waits for messages from the connected client and forwards the client message/disconnect
 // events to provided handlers in a new goroutine.
 // This function never returns, unless there is an error while reading from the channel or the client disconnects.
-func handleClient(l *Listener, conn *Conn, handleConn func(conn *Conn), handleMsg func(conn *Conn, msg []byte), handleDisconn func(conn *Conn)) error {
+func handleClient(l *Listener, conn Conn, handleConn func(conn Conn), handleMsg func(conn Conn, msg []byte), handleDisconn func(conn Conn)) error {
 	handleConn(conn)
+	tlsConn := conn.(*TLSConn) // hack: till we clean all the below hacks
 
 	defer func() {
-		conn.err = conn.Close() // todo: handle close error, store the error in conn object and return it to handleMsg/handleErr/handleDisconn or one level up (to server)
-		if conn.clientDisconnected {
-			log.Println("Client disconnected:", conn.RemoteAddr())
+		tlsConn.err = tlsConn.Close() // todo: handle close error, store the error in conn object and return it to handleMsg/handleErr/handleDisconn or one level up (to server)
+		if tlsConn.clientDisconnected {
+			log.Println("Client disconnected:", tlsConn.RemoteAddr())
 		} else {
-			log.Println("Closed client connection:", conn.RemoteAddr())
+			log.Println("Closed client connection:", tlsConn.RemoteAddr())
 		}
-		handleDisconn(conn)
+		handleDisconn(tlsConn)
 		l.connWG.Done()
 	}()
 
 	for {
-		if conn.err != nil {
-			return conn.err // todo: should we send error message to user, log the error, and close the conn and return instead?
+		if tlsConn.err != nil {
+			return tlsConn.err // todo: should we send error message to user, log the error, and close the conn and return instead?
 		}
 
-		msg, err := conn.Read()
+		msg, err := tlsConn.Read()
 		if err != nil {
 			if err == io.EOF {
-				conn.clientDisconnected = true
+				tlsConn.clientDisconnected = true
 				break
 			}
 			if operr, ok := err.(*net.OpError); ok && operr.Op == "read" && operr.Err.Error() == "use of closed network connection" {
-				conn.clientDisconnected = true
+				tlsConn.clientDisconnected = true
 				break
 			}
 			log.Fatalln("Errored while reading:", err)
@@ -140,7 +141,7 @@ func handleClient(l *Listener, conn *Conn, handleConn func(conn *Conn), handleMs
 		}()
 	}
 
-	return conn.err
+	return tlsConn.err
 }
 
 // Close closes the listener.
