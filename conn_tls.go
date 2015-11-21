@@ -10,11 +10,14 @@ import (
 	"log"
 	"net"
 	"time"
+
+	"github.com/neptulon/cmap"
 )
 
 // TLSConn is a full-duplex bidirectional client-server connection.
 type TLSConn struct {
 	id                 string
+	data               *cmap.CMap
 	conn               *tls.Conn
 	headerSize         int
 	maxMsgSize         int
@@ -45,6 +48,7 @@ func NewTLSConn(conn *tls.Conn, headerSize, maxMsgSize, readDeadline int, debug 
 
 	return &TLSConn{
 		id:           id,
+		data:         cmap.New(),
 		conn:         conn,
 		headerSize:   headerSize,
 		maxMsgSize:   maxMsgSize,
@@ -92,6 +96,11 @@ func Dial(addr string, ca []byte, clientCert []byte, clientCertKey []byte, debug
 // ID is a randomly generated unique connection ID
 func (c *TLSConn) ID() string {
 	return c.id
+}
+
+// Data is a thread-safe data store for storing arbitrary data for this connection session.
+func (c *TLSConn) Data() *cmap.CMap {
+	return c.data
 }
 
 // SetReadDeadline set the read deadline for the connection in seconds.
