@@ -10,14 +10,11 @@ import (
 	"log"
 	"net"
 	"time"
-
-	"github.com/neptulon/cmap"
 )
 
 // Conn is a full-duplex bidirectional client-server connection.
 type Conn struct {
-	ID                 string     // Randomly generated unique connection ID
-	Data               *cmap.CMap // Thread-safe data store for storing arbitrary data for this connection session
+	ID                 string // Randomly generated unique connection ID
 	conn               *tls.Conn
 	headerSize         int
 	maxMsgSize         int
@@ -27,7 +24,7 @@ type Conn struct {
 	clientDisconnected bool // hack: Whether the client disconnected from server before server closed connection
 }
 
-// NewConn creates a new neptulon.Conn object which wraps a given tls.Conn object.
+// NewConn creates a new neptulon.Conn object which wraps the given tls.Conn object.
 // Default values for headerSize, maxMsgSize, and readDeadline are 4 bytes, 4294967295 bytes (4GB), and 300 seconds, respectively.
 // Debug mode logs all raw TCP communication.
 func NewConn(conn *tls.Conn, headerSize, maxMsgSize, readDeadline int, debug bool) (*Conn, error) {
@@ -48,7 +45,6 @@ func NewConn(conn *tls.Conn, headerSize, maxMsgSize, readDeadline int, debug boo
 
 	return &Conn{
 		ID:           id,
-		Data:         cmap.New(),
 		conn:         conn,
 		headerSize:   headerSize,
 		maxMsgSize:   maxMsgSize,
