@@ -4,11 +4,12 @@ import "log"
 
 // Ctx is the incoming message context.
 type Ctx struct {
-	m    []func(ctx *Ctx)
-	i    int
 	Conn Conn
 	Msg  []byte
 	Res  []byte
+
+	m []func(ctx *Ctx)
+	i int
 }
 
 // Next executes the next middleware in the middleware stack.
