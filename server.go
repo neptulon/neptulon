@@ -11,14 +11,14 @@ import (
 
 // Server is a Neptulon server.
 type Server struct {
-	debug         bool
-	err           error
-	errMutex      sync.RWMutex
-	listener      *Listener
-	middleware    []func(ctx *Ctx)
-	conns         *cmap.CMap // conn ID -> Conn
-	handleConn    func(conn Conn)
-	handleDisconn func(conn Conn)
+	debug          bool
+	err            error
+	errMutex       sync.RWMutex
+	listener       *Listener
+	middleware     []func(ctx *Ctx)
+	conns          *cmap.CMap // conn ID -> Conn
+	connHandler    func(conn Conn)
+	disconnHandler func(conn Conn)
 }
 
 // NewServer creates a Neptulon server. This is the default TLS constructor.
@@ -30,17 +30,17 @@ func NewServer(cert, privKey, clientCACert []byte, laddr string, debug bool) (*S
 	}
 
 	return &Server{
-		debug:         debug,
-		listener:      l,
-		conns:         cmap.New(),
-		handleConn:    func(conn Conn) {},
-		handleDisconn: func(conn Conn) {},
+		debug:          debug,
+		listener:       l,
+		conns:          cmap.New(),
+		connHandler:    func(conn Conn) {},
+		disconnHandler: func(conn Conn) {},
 	}, nil
 }
 
 // Conn registers a function to handle client connection events.
 func (s *Server) Conn(handler func(conn Conn)) {
-	s.handleConn = handler
+	s.connHandler = handler
 }
 
 // Middleware registers a new middleware to handle incoming messages.
@@ -50,13 +50,13 @@ func (s *Server) Middleware(middleware func(ctx *Ctx)) {
 
 // Disconn registers a function to handle client disconnection events.
 func (s *Server) Disconn(handler func(conn Conn)) {
-	s.handleDisconn = handler
+	s.disconnHandler = handler
 }
 
 // Run starts accepting connections on the internal listener and handles connections with registered middleware.
 // This function blocks and never returns, unless there was an error while accepting a new connection or the listner was closed.
 func (s *Server) Run() error {
-	err := s.listener.Accept(handleConn(s), handleMsg(s), handleDisconn(s))
+	err := s.listener.Accept(s.handleConn, s.handleMsg, s.handleDisconn)
 	if err != nil && s.debug {
 		log.Fatalln("Listener returned an error while closing:", err)
 	}
@@ -95,34 +95,17 @@ func (s *Server) Stop() error {
 	return err
 }
 
-func handleConn(s *Server) func(conn Conn) {
-	return func(conn Conn) {
-		s.conns.Set(conn.ID(), conn)
-		s.handleConn(conn)
-	}
+func (s *Server) handleConn(conn Conn) {
+	s.conns.Set(conn.ID(), conn)
+	s.connHandler(conn)
 }
 
-func handleMsg(s *Server) func(conn Conn, msg []byte) {
-	return func(conn Conn, msg []byte) {
-		ctx := Ctx{Conn: conn, Msg: msg}
-		for _, m := range s.middleware {
-			m(&ctx)
-			if ctx.Res == nil {
-				continue
-			}
-
-			if err := conn.Write(ctx.Res); err != nil {
-				log.Fatalln("Errored while writing response to connection:", err)
-			}
-
-			break
-		}
-	}
+func (s *Server) handleMsg(conn Conn, msg []byte) {
+	ctx := Ctx{m: s.middleware, i: -1, Conn: conn, Msg: msg}
+	ctx.Next()
 }
 
-func handleDisconn(s *Server) func(conn Conn) {
-	return func(conn Conn) {
-		s.conns.Delete(conn.ID())
-		s.handleDisconn(conn)
-	}
+func (s *Server) handleDisconn(conn Conn) {
+	s.conns.Delete(conn.ID())
+	s.disconnHandler(conn)
 }
