@@ -8,16 +8,16 @@ type Ctx struct {
 	Msg  []byte
 	Res  []byte
 
-	m []func(ctx *Ctx)
-	i int
+	m  []func(ctx *Ctx)
+	mi int
 }
 
 // Next executes the next middleware in the middleware stack.
 func (c *Ctx) Next() {
-	c.i++
+	c.mi++
 
-	if c.i < len(c.m) {
-		c.m[c.i](c)
+	if c.mi <= len(c.m) {
+		c.m[c.mi-1](c)
 	} else {
 		if err := c.Conn.Write(c.Res); err != nil {
 			log.Fatalln("Errored while writing response to connection:", err)

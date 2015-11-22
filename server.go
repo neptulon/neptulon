@@ -101,7 +101,7 @@ func (s *Server) handleConn(conn Conn) {
 }
 
 func (s *Server) handleMsg(conn Conn, msg []byte) {
-	ctx := Ctx{m: s.middleware, i: -1, Conn: conn, Msg: msg}
+	ctx := Ctx{m: s.middleware, Conn: conn, Msg: msg}
 	ctx.Next()
 }
 
