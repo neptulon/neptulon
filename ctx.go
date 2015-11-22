@@ -18,7 +18,7 @@ func (c *Ctx) Next() {
 
 	if c.mi <= len(c.m) {
 		c.m[c.mi-1](c)
-	} else {
+	} else if c.Res != nil {
 		if err := c.Conn.Write(c.Res); err != nil {
 			log.Fatalln("Errored while writing response to connection:", err)
 		}
