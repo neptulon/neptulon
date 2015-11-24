@@ -1,12 +1,14 @@
 package neptulon
 
-import "log"
+import (
+	"fmt"
+	"log"
+)
 
 // Ctx is the incoming message context.
 type Ctx struct {
 	Conn Conn
 	Msg  []byte
-	Res  []byte
 
 	m  []func(ctx *Ctx)
 	mi int
@@ -18,9 +20,18 @@ func (c *Ctx) Next() {
 
 	if c.mi <= len(c.m) {
 		c.m[c.mi-1](c)
-	} else if c.Res != nil {
-		if err := c.Conn.Write(c.Res); err != nil {
-			log.Fatalln("Errored while writing response to connection:", err)
-		}
 	}
+}
+
+// Send writes the given message to the connection.
+func (c *Ctx) Send(msg []byte) error {
+	// todo: neptulon.Send vs Ctx.Send
+
+	if err := c.Conn.Write(msg); err != nil {
+		e := fmt.Errorf("Errored while writing response to connection: %v", err)
+		log.Fatalln(e)
+		return e
+	}
+
+	return nil
 }

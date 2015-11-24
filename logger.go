@@ -5,8 +5,8 @@ package neptulon
 // Logger provides low level request logging, performance metrics, and other metrics data.
 type Logger struct{}
 
-func perfLoggerMiddleware(conn Conn, msg []byte) {
+func perfLoggerMiddleware(ctx *Ctx) {
 }
 
-func requestResponseLoggerMiddleware(conn Conn, msg []byte) {
+func messageLoggerMiddleware(ctx *Ctx) {
 }
