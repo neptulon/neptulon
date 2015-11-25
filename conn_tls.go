@@ -27,7 +27,7 @@ type TLSConn struct {
 	clientDisconnected bool // hack: Whether the client disconnected from server before server closed connection
 }
 
-// NewTLSConn creates a new TLSConn object which wraps the given tls.TLSConn object.
+// NewTLSConn creates a new TLSConn object which wraps the given tls.Conn object.
 // Default values for headerSize, maxMsgSize, and readDeadline are 4 bytes, 4294967295 bytes (4GB), and 300 seconds, respectively.
 // Debug mode logs all raw TCP communication.
 func NewTLSConn(conn *tls.Conn, headerSize, maxMsgSize, readDeadline int, debug bool) (*TLSConn, error) {
