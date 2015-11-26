@@ -89,7 +89,7 @@ func (l *Listener) Accept(handleConn func(conn Conn), handleMsg func(conn Conn, 
 		l.connWG.Add(1)
 		log.Println("Client connected:", conn.RemoteAddr())
 
-		c, err := NewTLSConn(tlsconn, 0, 0, l.readDeadline, l.debug)
+		c, err := newTLSConn(tlsconn, 0, 0, l.readDeadline, l.debug)
 		if err != nil {
 			return err
 		}

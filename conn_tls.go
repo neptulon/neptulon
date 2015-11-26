@@ -27,10 +27,10 @@ type TLSConn struct {
 	clientDisconnected bool // hack: Whether the client disconnected from server before server closed connection
 }
 
-// NewTLSConn creates a new TLSConn object which wraps the given tls.Conn object.
+// newTLSConn creates a new TLSConn object which wraps the given tls.Conn object.
 // Default values for headerSize, maxMsgSize, and readDeadline are 4 bytes, 4294967295 bytes (4GB), and 300 seconds, respectively.
 // Debug mode logs all raw TCP communication.
-func NewTLSConn(conn *tls.Conn, headerSize, maxMsgSize, readDeadline int, debug bool) (*TLSConn, error) {
+func newTLSConn(conn *tls.Conn, headerSize, maxMsgSize, readDeadline int, debug bool) (*TLSConn, error) {
 	if headerSize == 0 {
 		headerSize = 4
 	}
@@ -90,7 +90,7 @@ func Dial(addr string, ca []byte, clientCert []byte, clientCertKey []byte, debug
 		return nil, err
 	}
 
-	return NewTLSConn(c, 0, 0, 0, debug)
+	return newTLSConn(c, 0, 0, 0, debug)
 }
 
 // ID is a randomly generated unique connection ID
