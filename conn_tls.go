@@ -17,7 +17,7 @@ import (
 // TLSConn is a full-duplex bidirectional client-server connection.
 type TLSConn struct {
 	id                 string
-	data               *cmap.CMap
+	session            *cmap.CMap
 	conn               *tls.Conn
 	headerSize         int
 	maxMsgSize         int
@@ -48,7 +48,7 @@ func NewTLSConn(conn *tls.Conn, headerSize, maxMsgSize, readDeadline int, debug 
 
 	return &TLSConn{
 		id:           id,
-		data:         cmap.New(),
+		session:      cmap.New(),
 		conn:         conn,
 		headerSize:   headerSize,
 		maxMsgSize:   maxMsgSize,
@@ -98,9 +98,9 @@ func (c *TLSConn) ID() string {
 	return c.id
 }
 
-// Data is a thread-safe data store for storing arbitrary data for this connection session.
-func (c *TLSConn) Data() *cmap.CMap {
-	return c.data
+// Session is a thread-safe data store for storing arbitrary data for this connection session.
+func (c *TLSConn) Session() *cmap.CMap {
+	return c.session
 }
 
 // SetReadDeadline set the read deadline for the connection in seconds.
