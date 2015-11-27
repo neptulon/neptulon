@@ -14,8 +14,8 @@ type TLSClient struct {
 	out []func(ctx *Ctx)
 }
 
-// NewTLSClient creates a new client using a given tls.Conn.
-func NewTLSClient(conn Conn) *TLSClient {
+// newTLSClient creates a new client using a given Conn.
+func newTLSClient(conn Conn) *TLSClient {
 	return &TLSClient{
 		Conn: conn,
 	}
