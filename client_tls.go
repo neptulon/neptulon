@@ -9,22 +9,27 @@ type TLSClient struct {
 	out []func(ctx *Ctx)
 }
 
-// newTLSClient creates a new client using a given Conn.
-func newTLSClient(conn Conn) *TLSClient {
+// todo: remove this!
+func newTLSClient(c Conn, in []func(ctx *Ctx)) *TLSClient {
 	return &TLSClient{
-		Conn: conn,
+		Conn: c,
+		in:   in,
 	}
 }
 
 // Send writes the given message to the connection.
 func (c *TLSClient) Send(msg []byte) error {
-	return c.Conn.Write(msg)
+	ctx := Ctx{m: c.out, Client: c, Msg: msg}
+	ctx.Next()
+	return c.Conn.Write(ctx.Msg)
 }
 
 // SendAsync writes a message to the connection on a saparate gorotuine.
 func (c *TLSClient) SendAsync(msg []byte, callback func(error)) {
 	go func() {
-		if err := c.Conn.Write(msg); err != nil {
+		if err := c.Send(msg); err != nil {
+			// todo: better use an error handler middleware -or- both approaches?
+			// todo2: use a single gorotuine + queue otherwise messages get interleaved
 			callback(err)
 		}
 	}()
