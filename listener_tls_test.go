@@ -70,7 +70,7 @@ func TestListener(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	newconn, _ := NewTLSConn(conn, 0, 0, 0, false)
+	newconn, _ := newTLSConn(conn, 0, 0, 0, false)
 
 	send(t, newconn, msg1)
 	send(t, newconn, msg1)
@@ -125,7 +125,7 @@ func send(t *testing.T, conn Conn, msg string) {
 }
 
 // closeGraceful waits for all request then connection handler goroutines to return then closes the listener. This method is meant for testing.
-func closeGraceful(l *Listener) error {
+func closeGraceful(l *TLSListener) error {
 	// todo: more proper way is to do TCPConn.CloseRead()/reqWG.Wait()/TCPConn.CloseWrite()/listener.Close()
 	// but that requires using net.TCPListener/TCPConn and then upgrading to TLS (which is also good when supporting UnixSocket)
 	l.reqWG.Wait()

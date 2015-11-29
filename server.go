@@ -14,7 +14,7 @@ type Server struct {
 	debug          bool
 	err            error
 	errMutex       sync.RWMutex
-	listener       *Listener
+	listener       Listener
 	middleware     []func(ctx *Ctx)
 	conns          *cmap.CMap // conn ID -> Conn
 	connHandler    func(conn Conn)
