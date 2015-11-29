@@ -79,7 +79,6 @@ func (l *TLSListener) Accept(handleConn func(conn Conn), handleMsg func(conn Con
 			// the underlying fd.accept() does some basic recovery though we might need more: http://golang.org/src/net/fd_unix.go
 		}
 
-		// todo: this casting early on doesn't seem necessary and can be removed in a futur iteration not to cause any side effects
 		tlsconn, ok := conn.(*tls.Conn)
 		if !ok {
 			conn.Close()
