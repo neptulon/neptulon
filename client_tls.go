@@ -2,7 +2,7 @@ package neptulon
 
 // TLSClient is a Neptulon connection client using Transport Layer Security.
 type TLSClient struct {
-	Conn Conn
+	Conn Conn // todo: Conn *TLSConn
 
 	// middleware for incoming and outgoing messages
 	in  []func(ctx *Ctx)

@@ -46,7 +46,7 @@ func Listen(cert, privKey, clientCACert []byte, laddr string, debug bool) (*TLSL
 		ClientAuth:   tls.VerifyClientCertIfGiven,
 	}
 
-	l, err := tls.Listen("tcp", laddr, &conf)
+	l, err := tls.Listen("tcp", laddr, &conf) // todo: returned type is TCPListener due to "tcp" so store it as such
 	if err != nil {
 		return nil, fmt.Errorf("failed to create TLS listener on network address %v with error: %v", laddr, err)
 	}
