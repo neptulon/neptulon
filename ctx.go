@@ -2,7 +2,7 @@ package neptulon
 
 // Ctx is the incoming message context.
 type Ctx struct {
-	Client  Client
+	Client  *Client
 	Msg     []byte
 	Session interface{} // Session is a data store for storing arbitrary data within this context to communicate with middleware further down the stack.
 

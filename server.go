@@ -14,17 +14,17 @@ type Server struct {
 	debug          bool
 	err            error
 	errMutex       sync.RWMutex
-	listener       Listener
+	listener       *Listener
 	middleware     []func(ctx *Ctx)
 	conns          *cmap.CMap // conn ID -> Conn
-	connHandler    func(conn Conn)
-	disconnHandler func(conn Conn)
+	connHandler    func(conn *Conn)
+	disconnHandler func(conn *Conn)
 }
 
 // NewServer creates a Neptulon server. This is the default TLS constructor.
 // Debug mode dumps raw TCP data to stderr (log.Println() default).
 func NewServer(cert, privKey, clientCACert []byte, laddr string, debug bool) (*Server, error) {
-	l, err := Listen(cert, privKey, clientCACert, laddr, debug)
+	l, err := ListenTLS(cert, privKey, clientCACert, laddr, debug)
 	if err != nil {
 		return nil, err
 	}
@@ -33,13 +33,13 @@ func NewServer(cert, privKey, clientCACert []byte, laddr string, debug bool) (*S
 		debug:          debug,
 		listener:       l,
 		conns:          cmap.New(),
-		connHandler:    func(conn Conn) {},
-		disconnHandler: func(conn Conn) {},
+		connHandler:    func(conn *Conn) {},
+		disconnHandler: func(conn *Conn) {},
 	}, nil
 }
 
 // Conn registers a function to handle client connection events.
-func (s *Server) Conn(handler func(conn Conn)) {
+func (s *Server) Conn(handler func(conn *Conn)) {
 	s.connHandler = handler
 }
 
@@ -49,7 +49,7 @@ func (s *Server) Middleware(middleware func(ctx *Ctx)) {
 }
 
 // Disconn registers a function to handle client disconnection events.
-func (s *Server) Disconn(handler func(conn Conn)) {
+func (s *Server) Disconn(handler func(conn *Conn)) {
 	s.disconnHandler = handler
 }
 
@@ -71,7 +71,7 @@ func (s *Server) Run() error {
 // Send sends a message throught the connection denoted by the connection ID.
 func (s *Server) Send(connID string, msg []byte) error {
 	if conn, ok := s.conns.GetOk(connID); ok {
-		return conn.(Conn).Write(msg)
+		return conn.(*Conn).Write(msg)
 	}
 
 	return fmt.Errorf("Connection ID not found: %v", connID)
@@ -84,7 +84,7 @@ func (s *Server) Stop() error {
 	// close all active connections discarding any read/writes that is going on currently
 	// this is not a problem as we always require an ACK but it will also mean that message deliveries will be at-least-once; to-and-from the server
 	s.conns.Range(func(conn interface{}) {
-		conn.(Conn).Close()
+		conn.(*Conn).Close()
 	})
 
 	s.errMutex.RLock()
@@ -95,17 +95,17 @@ func (s *Server) Stop() error {
 	return err
 }
 
-func (s *Server) handleConn(conn Conn) {
-	s.conns.Set(conn.ID(), conn)
+func (s *Server) handleConn(conn *Conn) {
+	s.conns.Set(conn.ID, conn)
 	s.connHandler(conn)
 }
 
-func (s *Server) handleMsg(conn Conn, msg []byte) {
+func (s *Server) handleMsg(conn *Conn, msg []byte) {
 	ctx := Ctx{m: s.middleware, Client: newTLSClient(conn, s.middleware), Msg: msg}
 	ctx.Next()
 }
 
-func (s *Server) handleDisconn(conn Conn) {
-	s.conns.Delete(conn.ID())
+func (s *Server) handleDisconn(conn *Conn) {
+	s.conns.Delete(conn.ID)
 	s.disconnHandler(conn)
 }

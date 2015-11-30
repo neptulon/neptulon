@@ -30,7 +30,7 @@ func TestListener(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	l, err := Listen(certChain.ServerCert, certChain.ServerKey, certChain.IntCACert, host, false)
+	l, err := ListenTLS(certChain.ServerCert, certChain.ServerKey, certChain.IntCACert, host, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -39,15 +39,15 @@ func TestListener(t *testing.T) {
 	listenerWG.Add(1)
 	go func() {
 		defer listenerWG.Done()
-		l.Accept(func(conn Conn) {},
-			func(conn Conn, msg []byte) {
+		l.Accept(func(conn *Conn) {},
+			func(conn *Conn, msg []byte) {
 				m := string(msg)
 				if m == "close" {
 					conn.Close()
 					return
 				}
 
-				certs := conn.(*TLSConn).ConnectionState().PeerCertificates
+				certs := conn.ConnectionState().PeerCertificates
 				if len(certs) > 0 {
 					t.Logf("Client connected with client certificate subject: %v\n", certs[0].Subject)
 				}
@@ -55,7 +55,7 @@ func TestListener(t *testing.T) {
 				if m != msg1 && m != msg2 && m != msg3 && m != msg4 && m != msg5 {
 					t.Fatal("Sent and incoming messages did not match! Sent message was message:", m)
 				}
-			}, func(conn Conn) {})
+			}, func(conn *Conn) {})
 	}()
 
 	roots := x509.NewCertPool()
@@ -109,7 +109,7 @@ func TestListener(t *testing.T) {
 // 	wg.Wait()
 // }
 
-func send(t *testing.T, conn Conn, msg string) {
+func send(t *testing.T, conn *Conn, msg string) {
 	data := []byte(msg)
 	n := len(data)
 
@@ -125,7 +125,7 @@ func send(t *testing.T, conn Conn, msg string) {
 }
 
 // closeGraceful waits for all request then connection handler goroutines to return then closes the listener. This method is meant for testing.
-func closeGraceful(l *TLSListener) error {
+func closeGraceful(l *Listener) error {
 	// todo: more proper way is to do TCPConn.CloseRead()/reqWG.Wait()/TCPConn.CloseWrite()/listener.Close()
 	// but that requires using net.TCPListener/TCPConn and then upgrading to TLS (which is also good when supporting UnixSocket)
 	l.reqWG.Wait()
