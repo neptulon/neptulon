@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/neptulon/cmap"
+	"github.com/neptulon/shortid"
 )
 
 // Conn is a full-duplex bidirectional connection.
@@ -42,7 +43,7 @@ func newTLSConn(conn *tls.Conn, headerSize, maxMsgSize, readDeadline int, debug 
 		readDeadline = 300
 	}
 
-	id, err := GenID()
+	id, err := shortid.UUID()
 	if err != nil {
 		return nil, err
 	}
