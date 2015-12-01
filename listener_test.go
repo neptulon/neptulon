@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/neptulon/ca"
+	"github.com/neptulon/randstr"
 )
 
 func TestLen(t *testing.T) {
@@ -21,8 +22,8 @@ func TestListener(t *testing.T) {
 	msg1 := "Lorem ipsum dolor sit amet, consectetur adipiscing elit."
 	msg2 := "In sit amet lectus felis, at pellentesque turpis."
 	msg3 := "Nunc urna enim, cursus varius aliquet ac, imperdiet eget tellus."
-	msg4 := randString(45000)   //0.45 MB
-	msg5 := randString(5000000) //5.0 MB
+	msg4 := randstr.Get(45000)   //0.45 MB
+	msg5 := randstr.Get(5000000) //5.0 MB
 
 	host := "127.0.0.1:3010"
 	certChain, err := ca.GenCertChain("FooBar", "127.0.0.1", "127.0.0.1", time.Hour, 512)
