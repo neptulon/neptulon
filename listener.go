@@ -21,6 +21,7 @@ type Listener struct {
 	readDeadline int
 	connWG       sync.WaitGroup
 	reqWG        sync.WaitGroup
+	tls          bool
 }
 
 // ListenTLS creates a TLS listener with the given PEM encoded X.509 certificate and the private key on the local network address laddr.
@@ -55,6 +56,7 @@ func ListenTLS(cert, privKey, clientCACert []byte, laddr string, debug bool) (*L
 	log.Printf("TLS listener created: %v\n", laddr)
 
 	return &Listener{
+		tls:      true,
 		debug:    debug,
 		listener: l,
 	}, nil
@@ -81,6 +83,7 @@ func (l *Listener) Accept(handleConn func(conn *client.Conn), handleMsg func(con
 			// the underlying fd.accept() does some basic recovery though we might need more: http://golang.org/src/net/fd_unix.go
 		}
 
+		// todo: if l.tls ...
 		tlsconn, ok := conn.(*tls.Conn)
 		if !ok {
 			conn.Close()
