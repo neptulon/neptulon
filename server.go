@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/neptulon/cmap"
+	"github.com/neptulon/conn-go"
 )
 
 // Server is a Neptulon server.
@@ -15,10 +16,10 @@ type Server struct {
 	err            error
 	errMutex       sync.RWMutex
 	listener       *Listener
-	middleware     []func(ctx *Ctx)
+	middleware     []func(ctx *conn.Ctx)
 	conns          *cmap.CMap // conn ID -> Conn
-	connHandler    func(conn *Conn)
-	disconnHandler func(conn *Conn)
+	connHandler    func(conn *conn.Conn)
+	disconnHandler func(conn *conn.Conn)
 }
 
 // NewServer creates a Neptulon server. This is the default TLS constructor.
@@ -33,23 +34,23 @@ func NewServer(cert, privKey, clientCACert []byte, laddr string, debug bool) (*S
 		debug:          debug,
 		listener:       l,
 		conns:          cmap.New(),
-		connHandler:    func(conn *Conn) {},
-		disconnHandler: func(conn *Conn) {},
+		connHandler:    func(conn *conn.Conn) {},
+		disconnHandler: func(conn *conn.Conn) {},
 	}, nil
 }
 
 // Conn registers a function to handle client connection events.
-func (s *Server) Conn(handler func(conn *Conn)) {
+func (s *Server) Conn(handler func(conn *conn.Conn)) {
 	s.connHandler = handler
 }
 
 // Middleware registers a new middleware to handle incoming messages.
-func (s *Server) Middleware(middleware func(ctx *Ctx)) {
+func (s *Server) Middleware(middleware func(ctx *conn.Ctx)) {
 	s.middleware = append(s.middleware, middleware)
 }
 
 // Disconn registers a function to handle client disconnection events.
-func (s *Server) Disconn(handler func(conn *Conn)) {
+func (s *Server) Disconn(handler func(conn *conn.Conn)) {
 	s.disconnHandler = handler
 }
 
@@ -71,7 +72,7 @@ func (s *Server) Run() error {
 // Send sends a message throught the connection denoted by the connection ID.
 func (s *Server) Send(connID string, msg []byte) error {
 	if conn, ok := s.conns.GetOk(connID); ok {
-		return conn.(*Conn).Write(msg)
+		return conn.(*conn.Conn).Write(msg)
 	}
 
 	return fmt.Errorf("Connection ID not found: %v", connID)
@@ -95,17 +96,17 @@ func (s *Server) Stop() error {
 	return err
 }
 
-func (s *Server) handleConn(conn *Conn) {
+func (s *Server) handleConn(conn *conn.Conn) {
 	s.conns.Set(conn.ID, conn)
 	s.connHandler(conn)
 }
 
-func (s *Server) handleMsg(conn *Conn, msg []byte) {
+func (s *Server) handleMsg(conn *conn.Conn, msg []byte) {
 	ctx := Ctx{m: s.middleware, Client: newTLSClient(conn, s.middleware), Msg: msg}
 	ctx.Next()
 }
 
-func (s *Server) handleDisconn(conn *Conn) {
+func (s *Server) handleDisconn(conn *conn.Conn) {
 	s.conns.Delete(conn.ID)
 	s.disconnHandler(conn)
 }
