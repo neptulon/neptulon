@@ -22,9 +22,9 @@ type Server struct {
 	disconnHandler func(conn *client.Conn)
 }
 
-// NewServer creates a Neptulon server. This is the default TLS constructor.
+// NewTLSServer creates a Neptulon server using Transport Layer Security.
 // Debug mode dumps raw TCP data to stderr (log.Println() default).
-func NewServer(cert, privKey, clientCACert []byte, laddr string, debug bool) (*Server, error) {
+func NewTLSServer(cert, privKey, clientCACert []byte, laddr string, debug bool) (*Server, error) {
 	l, err := ListenTLS(cert, privKey, clientCACert, laddr, debug)
 	if err != nil {
 		return nil, err
