@@ -49,7 +49,8 @@ func TestListener(t *testing.T) {
 					return
 				}
 
-				certs := conn.ConnectionState().PeerCertificates
+				connstate, _ := conn.ConnectionState()
+				certs := connstate.PeerCertificates
 				if len(certs) > 0 {
 					t.Logf("Client connected with client certificate subject: %v\n", certs[0].Subject)
 				}

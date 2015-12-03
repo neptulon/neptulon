@@ -49,10 +49,11 @@ func ListenTLS(cert, privKey, clientCACert []byte, laddr string, debug bool) (*L
 		ClientAuth:   tls.VerifyClientCertIfGiven,
 	}
 
-	l, err := tls.Listen("tcp", laddr, &conf) // todo: returned type is TCPListener due to "tcp" so store it as such
+	l, err := tls.Listen("tcp", laddr, &conf)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create TLS listener on network address %v with error: %v", laddr, err)
 	}
+
 	log.Printf("TLS listener created: %v\n", laddr)
 
 	return &Listener{
