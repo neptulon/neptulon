@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/neptulon/ca"
+	"github.com/neptulon/client"
+	"github.com/neptulon/randstr"
 )
 
 func TestLen(t *testing.T) {
@@ -21,8 +23,8 @@ func TestListener(t *testing.T) {
 	msg1 := "Lorem ipsum dolor sit amet, consectetur adipiscing elit."
 	msg2 := "In sit amet lectus felis, at pellentesque turpis."
 	msg3 := "Nunc urna enim, cursus varius aliquet ac, imperdiet eget tellus."
-	msg4 := randString(45000)   //0.45 MB
-	msg5 := randString(5000000) //5.0 MB
+	msg4 := randstr.Get(45000)   //0.45 MB
+	msg5 := randstr.Get(5000000) //5.0 MB
 
 	host := "127.0.0.1:3010"
 	certChain, err := ca.GenCertChain("FooBar", "127.0.0.1", "127.0.0.1", time.Hour, 512)
@@ -30,7 +32,7 @@ func TestListener(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	l, err := Listen(certChain.ServerCert, certChain.ServerKey, certChain.IntCACert, host, false)
+	l, err := ListenTLS(certChain.ServerCert, certChain.ServerKey, certChain.IntCACert, host, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -39,15 +41,16 @@ func TestListener(t *testing.T) {
 	listenerWG.Add(1)
 	go func() {
 		defer listenerWG.Done()
-		l.Accept(func(conn *Conn) {},
-			func(conn *Conn, msg []byte) {
+		l.Accept(func(conn *client.Conn) {},
+			func(conn *client.Conn, msg []byte) {
 				m := string(msg)
 				if m == "close" {
 					conn.Close()
 					return
 				}
 
-				certs := conn.ConnectionState().PeerCertificates
+				connstate, _ := conn.ConnectionState()
+				certs := connstate.PeerCertificates
 				if len(certs) > 0 {
 					t.Logf("Client connected with client certificate subject: %v\n", certs[0].Subject)
 				}
@@ -55,7 +58,7 @@ func TestListener(t *testing.T) {
 				if m != msg1 && m != msg2 && m != msg3 && m != msg4 && m != msg5 {
 					t.Fatal("Sent and incoming messages did not match! Sent message was message:", m)
 				}
-			}, func(conn *Conn) {})
+			}, func(conn *client.Conn) {})
 	}()
 
 	roots := x509.NewCertPool()
@@ -70,7 +73,7 @@ func TestListener(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	newconn, _ := NewConn(conn, 0, 0, 0, false)
+	newconn, _ := client.NewTLSConn(conn, 0, 0, 0, false)
 
 	send(t, newconn, msg1)
 	send(t, newconn, msg1)
@@ -109,7 +112,7 @@ func TestListener(t *testing.T) {
 // 	wg.Wait()
 // }
 
-func send(t *testing.T, conn *Conn, msg string) {
+func send(t *testing.T, conn *client.Conn, msg string) {
 	data := []byte(msg)
 	n := len(data)
 
