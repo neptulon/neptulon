@@ -17,8 +17,8 @@ type Server struct {
 	errMutex    sync.RWMutex
 	listener    *Listener
 	middleware  []func(ctx *client.Ctx)
-	conns       *cmap.CMap // conn ID -> Conn
-	connHandler func(conn *client.Conn)
+	clients     *cmap.CMap // conn ID -> Client
+	connHandler func(conn *client.Client)
 }
 
 // NewTLSServer creates a Neptulon server using Transport Layer Security.
@@ -30,15 +30,14 @@ func NewTLSServer(cert, privKey, clientCACert []byte, laddr string, debug bool) 
 	}
 
 	return &Server{
-		debug:       debug,
-		listener:    l,
-		conns:       cmap.New(),
-		connHandler: func(conn *client.Conn) {},
+		debug:    debug,
+		listener: l,
+		clients:  cmap.New(),
 	}, nil
 }
 
 // Conn registers a function to handle client connection events.
-func (s *Server) Conn(handler func(conn *client.Conn)) {
+func (s *Server) Conn(handler func(conn *client.Client)) {
 	s.connHandler = handler
 }
 
@@ -50,7 +49,7 @@ func (s *Server) Middleware(middleware ...func(ctx *client.Ctx)) {
 // Run starts accepting connections on the internal listener and handles connections with registered middleware.
 // This function blocks and never returns, unless there was an error while accepting a new connection or the listner was closed.
 func (s *Server) Run() error {
-	err := s.listener.Accept(s.handleConn, s.handleMsg, s.handleDisconn)
+	err := s.listener.Accept(s.handleConn, s.handleMsg)
 	if err != nil && s.debug {
 		log.Fatalln("Listener returned an error while closing:", err)
 	}
@@ -64,8 +63,8 @@ func (s *Server) Run() error {
 
 // Send sends a message throught the connection denoted by the connection ID.
 func (s *Server) Send(connID string, msg []byte) error {
-	if conn, ok := s.conns.GetOk(connID); ok {
-		return conn.(*client.Conn).Write(msg)
+	if c, ok := s.clients.GetOk(connID); ok {
+		return c.(*client.Client).Send(msg)
 	}
 
 	return fmt.Errorf("Connection ID not found: %v", connID)
@@ -77,8 +76,8 @@ func (s *Server) Stop() error {
 
 	// close all active connections discarding any read/writes that is going on currently
 	// this is not a problem as we always require an ACK but it will also mean that message deliveries will be at-least-once; to-and-from the server
-	s.conns.Range(func(conn interface{}) {
-		conn.(*client.Conn).Close()
+	s.clients.Range(func(c interface{}) {
+		c.(*client.Client).Disconnect()
 	})
 
 	s.errMutex.RLock()
@@ -90,17 +89,21 @@ func (s *Server) Stop() error {
 }
 
 func (s *Server) handleConn(c *client.Client) {
-	s.conns.Set(c.Conn.ID, c.Conn)
+	s.clients.Set(c.Conn.ID, c)
 	c.MiddlewareIn(s.middleware...)
-	s.connHandler(c.Conn)
+	c.MiddlewareDisconn(s.handleDisconn)
+
+	if s.connHandler != nil {
+		s.connHandler(c)
+	}
 }
 
 func (s *Server) handleMsg(c *client.Client, msg []byte) {
-	ctx, _ := client.NewCtx(c.Conn, msg, s.middleware)
+	ctx, _ := client.NewCtx(c, msg, s.middleware)
 	ctx.Next()
 }
 
-func (s *Server) handleDisconn(c *client.Client) {
-	s.conns.Delete(c.Conn.ID)
-	s.disconnHandler(c.Conn)
+func (s *Server) handleDisconn(ctx *client.Ctx) {
+	s.clients.Delete(ctx.Client.Conn.ID)
+	ctx.Next()
 }

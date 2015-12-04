@@ -70,7 +70,7 @@ func (l *Listener) SetReadDeadline(seconds int) {
 
 // Accept waits for incoming connections and forwards the client connect/message/disconnect events to provided handlers in a new goroutine.
 // This function blocks and never returns, unless there is an error while accepting a new connection.
-func (l *Listener) Accept(connHandler func(c *client.Client), msgHandler func(c *client.Client, msg []byte), disconnHandler func(c *client.Client)) error {
+func (l *Listener) Accept(connHandler func(c *client.Client), msgHandler func(c *client.Client, msg []byte)) error {
 	defer log.Println("Listener closed:", l.listener.Addr())
 	for {
 		conn, err := l.listener.Accept()
