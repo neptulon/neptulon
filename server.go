@@ -12,14 +12,13 @@ import (
 
 // Server is a Neptulon server.
 type Server struct {
-	debug          bool
-	err            error
-	errMutex       sync.RWMutex
-	listener       *Listener
-	middleware     []func(ctx *client.Ctx)
-	conns          *cmap.CMap // conn ID -> Conn
-	connHandler    func(conn *client.Conn)
-	disconnHandler func(conn *client.Conn)
+	debug       bool
+	err         error
+	errMutex    sync.RWMutex
+	listener    *Listener
+	middleware  []func(ctx *client.Ctx)
+	conns       *cmap.CMap // conn ID -> Conn
+	connHandler func(conn *client.Conn)
 }
 
 // NewTLSServer creates a Neptulon server using Transport Layer Security.
@@ -31,11 +30,10 @@ func NewTLSServer(cert, privKey, clientCACert []byte, laddr string, debug bool) 
 	}
 
 	return &Server{
-		debug:          debug,
-		listener:       l,
-		conns:          cmap.New(),
-		connHandler:    func(conn *client.Conn) {},
-		disconnHandler: func(conn *client.Conn) {},
+		debug:       debug,
+		listener:    l,
+		conns:       cmap.New(),
+		connHandler: func(conn *client.Conn) {},
 	}, nil
 }
 
@@ -47,11 +45,6 @@ func (s *Server) Conn(handler func(conn *client.Conn)) {
 // Middleware registers middleware to handle incoming messages.
 func (s *Server) Middleware(middleware ...func(ctx *client.Ctx)) {
 	s.middleware = append(s.middleware, middleware...)
-}
-
-// Disconn registers a function to handle client disconnection events.
-func (s *Server) Disconn(handler func(conn *client.Conn)) {
-	s.disconnHandler = handler
 }
 
 // Run starts accepting connections on the internal listener and handles connections with registered middleware.
