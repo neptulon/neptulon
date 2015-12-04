@@ -44,9 +44,9 @@ func (s *Server) Conn(handler func(conn *client.Conn)) {
 	s.connHandler = handler
 }
 
-// Middleware registers a new middleware to handle incoming messages.
-func (s *Server) Middleware(middleware func(ctx *client.Ctx)) {
-	s.middleware = append(s.middleware, middleware)
+// Middleware registers middleware to handle incoming messages.
+func (s *Server) Middleware(middleware ...func(ctx *client.Ctx)) {
+	s.middleware = append(s.middleware, middleware...)
 }
 
 // Disconn registers a function to handle client disconnection events.
@@ -96,17 +96,18 @@ func (s *Server) Stop() error {
 	return err
 }
 
-func (s *Server) handleConn(conn *client.Conn) {
-	s.conns.Set(conn.ID, conn)
-	s.connHandler(conn)
+func (s *Server) handleConn(c *client.Client) {
+	s.conns.Set(c.Conn.ID, c.Conn)
+	c.MiddlewareIn(s.middleware...)
+	s.connHandler(c.Conn)
 }
 
-func (s *Server) handleMsg(conn *client.Conn, msg []byte) {
-	ctx, _ := client.NewCtx(conn, msg, s.middleware)
+func (s *Server) handleMsg(c *client.Client, msg []byte) {
+	ctx, _ := client.NewCtx(c.Conn, msg, s.middleware)
 	ctx.Next()
 }
 
-func (s *Server) handleDisconn(conn *client.Conn) {
-	s.conns.Delete(conn.ID)
-	s.disconnHandler(conn)
+func (s *Server) handleDisconn(c *client.Client) {
+	s.conns.Delete(c.Conn.ID)
+	s.disconnHandler(c.Conn)
 }
