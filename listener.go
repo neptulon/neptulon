@@ -93,12 +93,14 @@ func (l *Listener) Accept(connHandler func(c *client.Client), msgHandler func(c 
 		l.connWG.Add(1)
 		log.Println("Client connected:", conn.RemoteAddr())
 
-		_, err = client.NewTLSConn(tlsconn, 0, 0, l.readDeadline, l.debug)
+		c, err = client.NewTLSConn(tlsconn, 0, 0, l.readDeadline, l.debug)
 		if err != nil {
 			return err
 		}
 
-		// client, err := newTLSClient
+		client, err := client.NewTLSClient(c)
+		// handleConn
+		// client.StartRead()
 
 		// go handleClient(l, c, handleConn, handleMsg, handleDisconn)
 	}
