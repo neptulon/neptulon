@@ -10,16 +10,16 @@ import (
 	"sync"
 )
 
-// Listener accepts connections from devices.
-type Listener struct {
+// listener accepts connections from devices.
+type listener struct {
 	debug    bool
 	listener net.Listener
 	connWG   sync.WaitGroup
 }
 
-// ListenTLS creates a TLS listener with the given PEM encoded X.509 certificate and the private key on the local network address laddr.
+// listenTLS creates a TLS listener with the given PEM encoded X.509 certificate and the private key on the local network address laddr.
 // Debug mode logs all server activity.
-func ListenTLS(cert, privKey, clientCACert []byte, laddr string, debug bool) (*Listener, error) {
+func listenTLS(cert, privKey, clientCACert []byte, laddr string, debug bool) (*listener, error) {
 	tlsCert, err := tls.X509KeyPair(cert, privKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse the server certificate or the private key: %v", err)
@@ -49,7 +49,7 @@ func ListenTLS(cert, privKey, clientCACert []byte, laddr string, debug bool) (*L
 
 	log.Printf("TLS listener created: %v\n", laddr)
 
-	return &Listener{
+	return &listener{
 		debug:    debug,
 		listener: l,
 	}, nil
@@ -57,7 +57,7 @@ func ListenTLS(cert, privKey, clientCACert []byte, laddr string, debug bool) (*L
 
 // Accept waits for incoming connections and forwards the client connect events to provided handler.
 // This function blocks and never returns, unless there is an error while accepting a new connection.
-func (l *Listener) Accept(connHandler func(c net.Conn) error) error {
+func (l *listener) Accept(connHandler func(c net.Conn) error) error {
 	defer log.Println("Listener closed:", l.listener.Addr())
 	for {
 		conn, err := l.listener.Accept()
@@ -79,6 +79,6 @@ func (l *Listener) Accept(connHandler func(c net.Conn) error) error {
 }
 
 // Close closes the listener.
-func (l *Listener) Close() error {
+func (l *listener) Close() error {
 	return l.listener.Close()
 }

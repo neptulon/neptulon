@@ -18,7 +18,7 @@ type Server struct {
 	debug          bool
 	err            error
 	errMutex       sync.RWMutex
-	listener       *Listener
+	listener       *listener
 	middlewareIn   []func(ctx *client.Ctx)
 	middlewareOut  []func(ctx *client.Ctx)
 	clients        *cmap.CMap // conn ID -> Client
@@ -31,7 +31,7 @@ type Server struct {
 // NewTLSServer creates a Neptulon server using Transport Layer Security.
 // Debug mode dumps raw TCP data to stderr (log.Println() default).
 func NewTLSServer(cert, privKey, clientCACert []byte, laddr string, debug bool) (*Server, error) {
-	l, err := ListenTLS(cert, privKey, clientCACert, laddr, debug)
+	l, err := listenTLS(cert, privKey, clientCACert, laddr, debug)
 	if err != nil {
 		return nil, err
 	}
