@@ -55,7 +55,7 @@ func (s *Server) MiddlewareOut(middleware ...func(ctx *client.Ctx)) {
 // Run starts accepting connections on the internal listener and handles connections with registered middleware.
 // This function blocks and never returns, unless there was an error while accepting a new connection or the listner was closed.
 func (s *Server) Run() error {
-	err := s.listener.Accept(s.handleConn, s.handleMsg)
+	err := s.listener.Accept(s.handleConn)
 	if err != nil && s.debug {
 		log.Fatalln("Listener returned an error while closing:", err)
 	}

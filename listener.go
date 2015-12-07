@@ -4,7 +4,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
-	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -19,7 +18,6 @@ type Listener struct {
 	listener     net.Listener
 	readDeadline int
 	connWG       sync.WaitGroup
-	reqWG        sync.WaitGroup
 	net          string // "tls", "tcp", "tcp4", "tcp6", "unix" or "unixpacket"
 }
 
@@ -70,7 +68,7 @@ func (l *Listener) SetReadDeadline(seconds int) {
 
 // Accept waits for incoming connections and forwards the client connect/message/disconnect events to provided handlers in a new goroutine.
 // This function blocks and never returns, unless there is an error while accepting a new connection.
-func (l *Listener) Accept(connHandler func(c *client.Client), msgHandler func(c *client.Client, msg []byte)) error {
+func (l *Listener) Accept(connHandler func(c *client.Client)) error {
 	defer log.Println("Listener closed:", l.listener.Addr())
 	for {
 		conn, err := l.listener.Accept()
@@ -84,14 +82,14 @@ func (l *Listener) Accept(connHandler func(c *client.Client), msgHandler func(c 
 		}
 
 		// todo: switch l.net ...
-		tlsconn, ok := conn.(*tls.Conn)
-		if !ok {
-			conn.Close()
-			return errors.New("cannot cast net.Conn interface to tls.Conn type")
-		}
-
-		l.connWG.Add(1)
-		log.Println("Client connected:", conn.RemoteAddr())
+		// tlsconn, ok := conn.(*tls.Conn)
+		// if !ok {
+		// 	conn.Close()
+		// 	return errors.New("cannot cast net.Conn interface to tls.Conn type")
+		// }
+		//
+		// l.connWG.Add(1)
+		// log.Println("Client connected:", conn.RemoteAddr())
 
 		// todo: listener should stop here and rest of preparing custom conn/client objects should be Server's duty
 		// we can also remove the readDeadline param this way
