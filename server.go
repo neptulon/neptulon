@@ -12,13 +12,14 @@ import (
 
 // Server is a Neptulon server.
 type Server struct {
-	debug       bool
-	err         error
-	errMutex    sync.RWMutex
-	listener    *Listener
-	middleware  []func(ctx *client.Ctx)
-	clients     *cmap.CMap // conn ID -> Client
-	connHandler func(conn *client.Client)
+	debug         bool
+	err           error
+	errMutex      sync.RWMutex
+	listener      *Listener
+	middlewareIn  []func(ctx *client.Ctx)
+	middlewareOut []func(ctx *client.Ctx)
+	clients       *cmap.CMap // conn ID -> Client
+	connHandler   func(conn *client.Client)
 }
 
 // NewTLSServer creates a Neptulon server using Transport Layer Security.
@@ -41,9 +42,14 @@ func (s *Server) Conn(handler func(conn *client.Client)) {
 	s.connHandler = handler
 }
 
-// Middleware registers middleware to handle incoming messages.
-func (s *Server) Middleware(middleware ...func(ctx *client.Ctx)) {
-	s.middleware = append(s.middleware, middleware...)
+// MiddlewareIn registers middleware to handle incoming messages.
+func (s *Server) MiddlewareIn(middleware ...func(ctx *client.Ctx)) {
+	s.middlewareIn = append(s.middlewareIn, middleware...)
+}
+
+// MiddlewareOut registers middleware to handle/intercept outgoing messages before they are sent.
+func (s *Server) MiddlewareOut(middleware ...func(ctx *client.Ctx)) {
+	s.middlewareOut = append(s.middlewareOut, middleware...)
 }
 
 // Run starts accepting connections on the internal listener and handles connections with registered middleware.
@@ -90,7 +96,8 @@ func (s *Server) Stop() error {
 
 func (s *Server) handleConn(c *client.Client) {
 	s.clients.Set(c.Conn.ID, c)
-	c.MiddlewareIn(s.middleware...)
+
+	c.MiddlewareIn(s.middlewareIn...)
 	c.MiddlewareDisconn(s.handleDisconn)
 
 	if s.connHandler != nil {
@@ -99,7 +106,7 @@ func (s *Server) handleConn(c *client.Client) {
 }
 
 func (s *Server) handleMsg(c *client.Client, msg []byte) {
-	ctx, _ := client.NewCtx(c, msg, s.middleware)
+	ctx, _ := client.NewCtx(c, msg, s.middlewareIn)
 	ctx.Next()
 }
 

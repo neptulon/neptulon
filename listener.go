@@ -93,12 +93,15 @@ func (l *Listener) Accept(connHandler func(c *client.Client), msgHandler func(c 
 		l.connWG.Add(1)
 		log.Println("Client connected:", conn.RemoteAddr())
 
-		c, err = client.NewTLSConn(tlsconn, 0, 0, l.readDeadline, l.debug)
-		if err != nil {
-			return err
-		}
+		// todo: listener should stop here and rest of preparing custom conn/client objects should be Server's duty
+		// we can also remove the readDeadline param this way
 
-		client, err := client.NewTLSClient(c)
+		// c, err := client.NewTLSConn(tlsconn, 0, 0, l.readDeadline, l.debug)
+		// if err != nil {
+		// 	return err
+		// }
+
+		// client, err := client.NewTLSClient(c)
 		// handleConn
 		// client.StartRead()
 
