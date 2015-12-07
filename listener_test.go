@@ -3,7 +3,6 @@ package neptulon
 import (
 	"crypto/tls"
 	"crypto/x509"
-	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -13,18 +12,13 @@ import (
 	"github.com/neptulon/randstr"
 )
 
-func TestLen(t *testing.T) {
-	a, _ := strconv.Atoi("12344324")
-	t.Log(a)
-}
-
 // todo: if we are going to expose raw Listener, this should be in integration tests, otherwise Listener should be private
 func TestListener(t *testing.T) {
 	msg1 := "Lorem ipsum dolor sit amet, consectetur adipiscing elit."
 	msg2 := "In sit amet lectus felis, at pellentesque turpis."
 	msg3 := "Nunc urna enim, cursus varius aliquet ac, imperdiet eget tellus."
-	msg4 := randstr.Get(45000)   //0.45 MB
-	msg5 := randstr.Get(5000000) //5.0 MB
+	msg4 := randstr.Get(45000)   // 0.45 MB
+	msg5 := randstr.Get(5000000) // 5.0 MB
 
 	host := "127.0.0.1:3010"
 	certChain, err := ca.GenCertChain("FooBar", "127.0.0.1", "127.0.0.1", time.Hour, 512)

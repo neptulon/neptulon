@@ -102,6 +102,7 @@ func (s *Server) Stop() error {
 	if s.err != nil {
 		return fmt.Errorf("There was a recorded internal error before closing the connection: %v", s.err)
 	}
+
 	s.errMutex.RUnlock()
 	return err
 }
@@ -137,4 +138,7 @@ func (s *Server) handleConn(c net.Conn) error {
 
 func (s *Server) handleDisconn(c *client.Client) {
 	s.clients.Delete(c.Conn.ID)
+	if s.disconnHandler != nil {
+		s.disconnHandler(c)
+	}
 }
