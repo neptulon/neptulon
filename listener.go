@@ -8,17 +8,13 @@ import (
 	"log"
 	"net"
 	"sync"
-
-	"github.com/neptulon/client"
 )
 
 // Listener accepts connections from devices.
 type Listener struct {
-	debug        bool
-	listener     net.Listener
-	readDeadline int
-	connWG       sync.WaitGroup
-	net          string // "tls", "tcp", "tcp4", "tcp6", "unix" or "unixpacket"
+	debug    bool
+	listener net.Listener
+	connWG   sync.WaitGroup
 }
 
 // ListenTLS creates a TLS listener with the given PEM encoded X.509 certificate and the private key on the local network address laddr.
@@ -54,21 +50,14 @@ func ListenTLS(cert, privKey, clientCACert []byte, laddr string, debug bool) (*L
 	log.Printf("TLS listener created: %v\n", laddr)
 
 	return &Listener{
-		net:      "tls",
 		debug:    debug,
 		listener: l,
 	}, nil
 }
 
-// SetReadDeadline sets the read deadline for connections.
-// If not set, default deadline of Conn struct is used.
-func (l *Listener) SetReadDeadline(seconds int) {
-	l.readDeadline = seconds
-}
-
-// Accept waits for incoming connections and forwards the client connect/message/disconnect events to provided handlers in a new goroutine.
+// Accept waits for incoming connections and forwards the client connect events to provided handler.
 // This function blocks and never returns, unless there is an error while accepting a new connection.
-func (l *Listener) Accept(connHandler func(c *client.Client)) error {
+func (l *Listener) Accept(connHandler func(c net.Conn) error) error {
 	defer log.Println("Listener closed:", l.listener.Addr())
 	for {
 		conn, err := l.listener.Accept()
@@ -76,81 +65,18 @@ func (l *Listener) Accept(connHandler func(c *client.Client)) error {
 			if operr, ok := err.(*net.OpError); ok && operr.Op == "accept" && operr.Err.Error() == "use of closed network connection" {
 				return nil
 			}
+
 			return fmt.Errorf("error while accepting a new connection from a client: %v", err)
 			// todo: it might not be appropriate to break the loop on recoverable errors (like client disconnect during handshake)
 			// the underlying fd.accept() does some basic recovery though we might need more: http://golang.org/src/net/fd_unix.go
 		}
 
-		// todo: switch l.net ...
-		// tlsconn, ok := conn.(*tls.Conn)
-		// if !ok {
-		// 	conn.Close()
-		// 	return errors.New("cannot cast net.Conn interface to tls.Conn type")
-		// }
-		//
-		// l.connWG.Add(1)
-		// log.Println("Client connected:", conn.RemoteAddr())
+		l.connWG.Add(1)
+		log.Println("Client connected:", conn.RemoteAddr())
 
-		// todo: listener should stop here and rest of preparing custom conn/client objects should be Server's duty
-		// we can also remove the readDeadline param this way
-
-		// c, err := client.NewTLSConn(tlsconn, 0, 0, l.readDeadline, l.debug)
-		// if err != nil {
-		// 	return err
-		// }
-
-		// client, err := client.NewTLSClient(c)
-		// handleConn
-		// client.StartRead()
-
-		// go handleClient(l, c, handleConn, handleMsg, handleDisconn)
+		return connHandler(conn)
 	}
 }
-
-// handleClient waits for messages from the connected client and forwards the client message/disconnect
-// events to provided handlers in a new goroutine.
-// This function never returns, unless there is an error while reading from the channel or the client disconnects.
-// func handleClient(l *Listener, conn *client.Client, handleConn func(conn *client.Client), handleMsg func(conn *client.Client, msg []byte), handleDisconn func(conn *client.Client)) error {
-// 	handleConn(conn)
-//
-// 	defer func() {
-// 		conn.Err = conn.Close() // todo: handle close error, store the error in conn object and return it to handleMsg/handleErr/handleDisconn or one level up (to server)
-// 		if conn.ClientDisconnected {
-// 			log.Println("Client disconnected:", conn.RemoteAddr())
-// 		} else {
-// 			log.Println("Closed client connection:", conn.RemoteAddr())
-// 		}
-// 		handleDisconn(conn)
-// 		l.connWG.Done()
-// 	}()
-//
-// 	for {
-// 		if conn.Err != nil {
-// 			return conn.Err // todo: should we send error message to user, log the error, and close the conn and return instead?
-// 		}
-//
-// 		msg, err := conn.Read()
-// 		if err != nil {
-// 			if err == io.EOF {
-// 				conn.ClientDisconnected = true
-// 				break
-// 			}
-// 			if operr, ok := err.(*net.OpError); ok && operr.Op == "read" && operr.Err.Error() == "use of closed network connection" {
-// 				conn.ClientDisconnected = true
-// 				break
-// 			}
-// 			log.Fatalln("Errored while reading:", err)
-// 		}
-//
-// 		l.reqWG.Add(1)
-// 		go func() {
-// 			defer l.reqWG.Done()
-// 			handleMsg(conn, msg)
-// 		}()
-// 	}
-//
-// 	return conn.Err
-// }
 
 // Close closes the listener.
 func (l *Listener) Close() error {

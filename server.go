@@ -2,8 +2,11 @@
 package neptulon
 
 import (
+	"crypto/tls"
+	"errors"
 	"fmt"
 	"log"
+	"net"
 	"sync"
 
 	"github.com/neptulon/client"
@@ -12,14 +15,17 @@ import (
 
 // Server is a Neptulon server.
 type Server struct {
-	debug         bool
-	err           error
-	errMutex      sync.RWMutex
-	listener      *Listener
-	middlewareIn  []func(ctx *client.Ctx)
-	middlewareOut []func(ctx *client.Ctx)
-	clients       *cmap.CMap // conn ID -> Client
-	connHandler   func(conn *client.Client)
+	debug          bool
+	err            error
+	errMutex       sync.RWMutex
+	listener       *Listener
+	middlewareIn   []func(ctx *client.Ctx)
+	middlewareOut  []func(ctx *client.Ctx)
+	clients        *cmap.CMap // conn ID -> Client
+	connHandler    func(conn *client.Client)
+	disconnHandler func(conn *client.Client)
+	net            string // "tls", "tcp", "tcp4", "tcp6", "unix" or "unixpacket"
+	reqWG          sync.WaitGroup
 }
 
 // NewTLSServer creates a Neptulon server using Transport Layer Security.
@@ -34,6 +40,7 @@ func NewTLSServer(cert, privKey, clientCACert []byte, laddr string, debug bool) 
 		debug:    debug,
 		listener: l,
 		clients:  cmap.New(),
+		net:      "tls",
 	}, nil
 }
 
@@ -50,6 +57,11 @@ func (s *Server) MiddlewareIn(middleware ...func(ctx *client.Ctx)) {
 // MiddlewareOut registers middleware to handle/intercept outgoing messages before they are sent.
 func (s *Server) MiddlewareOut(middleware ...func(ctx *client.Ctx)) {
 	s.middlewareOut = append(s.middlewareOut, middleware...)
+}
+
+// Disconn registers a function to handle client disconnection events.
+func (s *Server) Disconn(handler func(c *client.Client)) {
+	s.disconnHandler = handler
 }
 
 // Run starts accepting connections on the internal listener and handles connections with registered middleware.
@@ -94,23 +106,35 @@ func (s *Server) Stop() error {
 	return err
 }
 
-func (s *Server) handleConn(c *client.Client) {
-	s.clients.Set(c.Conn.ID, c)
+func (s *Server) handleConn(c net.Conn) error {
+	switch s.net {
+	case "tls":
+		tlsc, ok := c.(*tls.Conn)
+		if !ok {
+			c.Close()
+			return errors.New("cannot cast net.Conn interface to tls.Conn type")
+		}
 
-	c.MiddlewareIn(s.middlewareIn...)
-	c.MiddlewareDisconn(s.handleDisconn)
+		ntlsc, err := client.NewTLSConn(tlsc, 0, 0, 0, s.debug)
+		if err != nil {
+			return err
+		}
 
-	if s.connHandler != nil {
-		s.connHandler(c)
+		client, err := client.NewClient(ntlsc, &s.reqWG, s.handleDisconn, s.middlewareIn, s.middlewareOut)
+		if err != nil {
+			return err
+		}
+
+		s.clients.Set(ntlsc.ID, client)
+
+		if s.connHandler != nil {
+			s.connHandler(client)
+		}
 	}
+
+	return errors.New("connection is of unknown type")
 }
 
-func (s *Server) handleMsg(c *client.Client, msg []byte) {
-	ctx, _ := client.NewCtx(c, msg, s.middlewareIn)
-	ctx.Next()
-}
-
-func (s *Server) handleDisconn(ctx *client.Ctx) {
-	s.clients.Delete(ctx.Client.Conn.ID)
-	ctx.Next()
+func (s *Server) handleDisconn(c *client.Client) {
+	s.clients.Delete(c.Conn.ID)
 }
