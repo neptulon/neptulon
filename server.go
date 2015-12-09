@@ -25,6 +25,7 @@ type Server struct {
 	connHandler    func(conn *client.Client)
 	disconnHandler func(conn *client.Client)
 	net            string // "tls", "tcp", "tcp4", "tcp6", "unix" or "unixpacket"
+	connWG         sync.WaitGroup
 	reqWG          sync.WaitGroup
 }
 
@@ -127,6 +128,7 @@ func (s *Server) handleConn(c net.Conn) error {
 		}
 
 		s.clients.Set(ntlsc.ID, client)
+		s.connWG.Add(1)
 
 		if s.connHandler != nil {
 			s.connHandler(client)
@@ -138,6 +140,7 @@ func (s *Server) handleConn(c net.Conn) error {
 
 func (s *Server) handleDisconn(c *client.Client) {
 	s.clients.Delete(c.Conn.ID)
+	s.connWG.Done()
 	if s.disconnHandler != nil {
 		s.disconnHandler(c)
 	}

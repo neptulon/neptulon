@@ -7,14 +7,12 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"sync"
 )
 
 // listener accepts connections from devices.
 type listener struct {
 	debug    bool
 	listener net.Listener
-	connWG   sync.WaitGroup
 }
 
 // listenTLS creates a TLS listener with the given PEM encoded X.509 certificate and the private key on the local network address laddr.
@@ -71,7 +69,6 @@ func (l *listener) Accept(connHandler func(c net.Conn) error) error {
 			// the underlying fd.accept() does some basic recovery though we might need more: http://golang.org/src/net/fd_unix.go
 		}
 
-		l.connWG.Add(1)
 		log.Println("Client connected:", conn.RemoteAddr())
 
 		return connHandler(conn)
