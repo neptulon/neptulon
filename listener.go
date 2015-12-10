@@ -11,13 +11,11 @@ import (
 
 // listener accepts connections from devices.
 type listener struct {
-	debug    bool
 	listener net.Listener
 }
 
 // listenTLS creates a TLS listener with the given PEM encoded X.509 certificate and the private key on the local network address laddr.
-// Debug mode logs all server activity.
-func listenTLS(cert, privKey, clientCACert []byte, laddr string, debug bool) (*listener, error) {
+func listenTLS(cert, privKey, clientCACert []byte, laddr string) (*listener, error) {
 	tlsCert, err := tls.X509KeyPair(cert, privKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse the server certificate or the private key: %v", err)
@@ -48,7 +46,6 @@ func listenTLS(cert, privKey, clientCACert []byte, laddr string, debug bool) (*l
 	log.Printf("TLS listener created: %v\n", laddr)
 
 	return &listener{
-		debug:    debug,
 		listener: l,
 	}, nil
 }
