@@ -25,7 +25,7 @@ type ServerHelper struct {
 	serverWG sync.WaitGroup // server instance goroutine wait group
 }
 
-// NewTLSServerHelper creates a new TLS server helper object.
+// NewTLSServerHelper creates a new server helper object with Transport Layer Security.
 func NewTLSServerHelper(t *testing.T) *ServerHelper {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short testing mode")
