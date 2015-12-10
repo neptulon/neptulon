@@ -15,16 +15,15 @@ import (
 // Server is a Neptulon server.
 type Server struct {
 	debug          bool
-	err            error
-	listener       *listener
-	middlewareIn   []func(ctx *client.Ctx)
-	middlewareOut  []func(ctx *client.Ctx)
-	clients        *cmap.CMap // conn ID -> Client
-	connHandler    func(conn *client.Client)
-	disconnHandler func(conn *client.Client)
 	net            string // "tls", "tcp", "tcp4", "tcp6", "unix" or "unixpacket"
+	listener       *listener
+	clients        *cmap.CMap // conn ID -> Client
 	connWG         sync.WaitGroup
 	reqWG          sync.WaitGroup
+	middlewareIn   []func(ctx *client.Ctx)
+	middlewareOut  []func(ctx *client.Ctx)
+	connHandler    func(conn *client.Client)
+	disconnHandler func(conn *client.Client)
 }
 
 // NewTLSServer creates a Neptulon server using Transport Layer Security.
@@ -64,10 +63,10 @@ func (s *Server) Disconn(handler func(c *client.Client)) {
 }
 
 // Run starts accepting connections on the internal listener and handles connections with registered middleware.
-// This function blocks and never returns, unless there was an error while accepting a new connection or the listner was closed.
+// This function blocks and never returns until the server is closed by another goroutine or an internal error occurs.
 func (s *Server) Run() error {
 	if err := s.listener.Accept(s.handleConn); err != nil {
-		return fmt.Errorf("And error occured during or after accepting a new connection: %v", s.err)
+		return fmt.Errorf("And error occured during or after accepting a new connection: %v", err)
 	}
 
 	return nil
@@ -93,7 +92,7 @@ func (s *Server) Stop() error {
 	})
 
 	if err != nil {
-		return fmt.Errorf("And error occured before or while stopping the server: %v", s.err)
+		return fmt.Errorf("And error occured before or while stopping the server: %v", err)
 	}
 
 	return nil
