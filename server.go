@@ -27,7 +27,7 @@ type Server struct {
 }
 
 // NewTLSServer creates a Neptulon server using Transport Layer Security.
-// Debug mode dumps raw TCP communication data to stderr (log.Println() default).
+// // Debug mode logs incoming messages.
 func NewTLSServer(cert, privKey, clientCACert []byte, laddr string, debug bool) (*Server, error) {
 	l, err := listenTLS(cert, privKey, clientCACert, laddr)
 	if err != nil {

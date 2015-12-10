@@ -19,6 +19,7 @@ type ServerHelper struct {
 	IntCAKey,
 	ServerCert,
 	ServerKey []byte
+	Address string
 
 	testing  *testing.T
 	server   *neptulon.Server
@@ -31,31 +32,32 @@ func NewTLSServerHelper(t *testing.T) *ServerHelper {
 		t.Skip("Skipping integration test in short testing mode")
 	}
 
+	host, port := "127.0.0.1", "3001"
+	laddr := host + ":" + port
+
 	// generate TLS certs
-	certChain, err := ca.GenCertChain("FooBar", "127.0.0.1", "127.0.0.1", time.Hour, 512)
+	certChain, err := ca.GenCertChain("FooBar", host, host, time.Hour, 512)
 	if err != nil {
 		t.Fatal("Failed to create TLS certificate chain:", err)
 	}
 
-	laddr := "127.0.0.1:3001"
 	s, err := neptulon.NewTLSServer(certChain.ServerCert, certChain.ServerKey, certChain.IntCACert, laddr, false)
 	if err != nil {
 		t.Fatal("Failed to create server:", err)
 	}
 
-	h := ServerHelper{
+	return &ServerHelper{
 		RootCACert: certChain.RootCACert,
 		RootCAKey:  certChain.RootCAKey,
 		IntCACert:  certChain.IntCACert,
 		IntCAKey:   certChain.IntCAKey,
 		ServerCert: certChain.ServerCert,
 		ServerKey:  certChain.ServerKey,
+		Address:    laddr,
 
 		testing: t,
 		server:  s,
 	}
-
-	return &h
 }
 
 // Run initializes the Neptulon server instance which is ready to accept connections after this function returns.
