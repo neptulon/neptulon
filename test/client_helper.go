@@ -15,12 +15,17 @@ type ClientHelper struct {
 	cert, key []byte
 }
 
-// NewTLSClientHelper creates a new client helper object with Transport Layer Security.
+// NewClientHelper creates a new client helper object.
 // Takes target server as an argument to retrieve server certs, address, etc.
-func NewTLSClientHelper(t *testing.T, s *ServerHelper) *ClientHelper {
+func NewClientHelper(t *testing.T, s *ServerHelper) *ClientHelper {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short testing mode")
 	}
 
 	return &ClientHelper{testing: t, server: s}
+}
+
+// Dial initiates a TLS connection.
+func (c *ClientHelper) DialTLS() *ClientHelper {
+
 }
