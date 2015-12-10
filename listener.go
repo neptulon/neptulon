@@ -60,18 +60,20 @@ func (l *listener) Accept(connHandler func(c net.Conn) error) error {
 	for {
 		conn, err := l.listener.Accept()
 		if err != nil {
+			// if listener was closed with the Close() method, stop accepting new connections and quit accept loop with no error
 			if operr, ok := err.(*net.OpError); ok && operr.Op == "accept" && operr.Err.Error() == "use of closed network connection" {
 				return nil
 			}
 
-			return fmt.Errorf("error while accepting a new connection from a client: %v", err)
 			// todo: it might not be appropriate to break the loop on recoverable errors (like client disconnect during handshake)
 			// the underlying fd.accept() does some basic recovery though we might need more: http://golang.org/src/net/fd_unix.go
+			return fmt.Errorf("error while accepting a new connection from a client: %v", err)
 		}
 
 		log.Println("Client connected:", conn.RemoteAddr())
-
-		return connHandler(conn)
+		if err := connHandler(conn); err != nil {
+			return err
+		}
 	}
 }
 

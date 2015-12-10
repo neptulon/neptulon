@@ -26,7 +26,6 @@ type ServerHelper struct {
 }
 
 // NewTLSServerHelper creates a new TLS server helper object.
-// Neptulon server instance is initialized and ready to accept connection after this function returns.
 func NewTLSServerHelper(t *testing.T) *ServerHelper {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short testing mode")
@@ -56,13 +55,24 @@ func NewTLSServerHelper(t *testing.T) *ServerHelper {
 		server:  s,
 	}
 
-	h.serverWG.Add(1)
+	return &h
+}
+
+// Run initializes the Neptulon server instance which is ready to accept connections after this function returns.
+func (s *ServerHelper) Run() {
+	s.serverWG.Add(1)
 	go func() {
-		defer h.serverWG.Done()
-		s.Run()
+		defer s.serverWG.Done()
+		s.server.Run()
 	}()
 
 	time.Sleep(time.Millisecond) // give Run() enough time to initiate
+}
 
-	return &h
+// Stop stops the server instance.
+func (s *ServerHelper) Stop() {
+	if err := s.server.Stop(); err != nil {
+		s.testing.Fatal("Failed to stop the server:", err)
+	}
+	s.serverWG.Wait()
 }

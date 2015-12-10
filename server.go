@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
-	"log"
 	"net"
 	"sync"
 
@@ -17,7 +16,6 @@ import (
 type Server struct {
 	debug          bool
 	err            error
-	errMutex       sync.RWMutex
 	listener       *listener
 	middlewareIn   []func(ctx *client.Ctx)
 	middlewareOut  []func(ctx *client.Ctx)
@@ -68,16 +66,11 @@ func (s *Server) Disconn(handler func(c *client.Client)) {
 // Run starts accepting connections on the internal listener and handles connections with registered middleware.
 // This function blocks and never returns, unless there was an error while accepting a new connection or the listner was closed.
 func (s *Server) Run() error {
-	err := s.listener.Accept(s.handleConn)
-	if err != nil && s.debug {
-		log.Fatalln("Listener returned an error while closing:", err)
+	if err := s.listener.Accept(s.handleConn); err != nil {
+		return fmt.Errorf("And error occured during or after accepting a new connection: %v", s.err)
 	}
 
-	s.errMutex.Lock()
-	s.err = err
-	s.errMutex.Unlock()
-
-	return err
+	return nil
 }
 
 // Send sends a message throught the connection denoted by the connection ID.
@@ -99,13 +92,11 @@ func (s *Server) Stop() error {
 		c.(*client.Client).Disconnect()
 	})
 
-	s.errMutex.RLock()
-	if s.err != nil {
-		return fmt.Errorf("There was a recorded internal error before closing the connection: %v", s.err)
+	if err != nil {
+		return fmt.Errorf("And error occured before or while stopping the server: %v", s.err)
 	}
 
-	s.errMutex.RUnlock()
-	return err
+	return nil
 }
 
 func (s *Server) handleConn(c net.Conn) error {
