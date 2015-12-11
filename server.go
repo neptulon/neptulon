@@ -27,7 +27,6 @@ type Server struct {
 }
 
 // NewTLSServer creates a Neptulon server using Transport Layer Security.
-// // Debug mode logs incoming messages.
 func NewTLSServer(cert, privKey, clientCACert []byte, laddr string, debug bool) (*Server, error) {
 	l, err := listenTLS(cert, privKey, clientCACert, laddr)
 	if err != nil {
@@ -107,7 +106,7 @@ func (s *Server) handleConn(c net.Conn) error {
 			return errors.New("cannot cast net.Conn interface to tls.Conn type")
 		}
 
-		ntlsc, err := client.NewTLSConn(tlsc, 0, 0, 0, s.debug)
+		ntlsc, err := client.NewTLSConn(tlsc, s.debug)
 		if err != nil {
 			return err
 		}
