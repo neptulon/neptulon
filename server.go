@@ -19,11 +19,11 @@ type Server struct {
 	listener       *listener
 	clients        *cmap.CMap // conn ID -> Client
 	connWG         sync.WaitGroup
-	reqWG          sync.WaitGroup
+	msgWG          sync.WaitGroup
 	middlewareIn   []func(ctx *client.Ctx)
 	middlewareOut  []func(ctx *client.Ctx)
-	connHandler    func(conn *client.Client)
-	disconnHandler func(conn *client.Client)
+	connHandler    func(client *client.Client)
+	disconnHandler func(client *client.Client)
 }
 
 // NewTLSServer creates a Neptulon server using Transport Layer Security.
@@ -42,7 +42,7 @@ func NewTLSServer(cert, privKey, clientCACert []byte, laddr string, debug bool) 
 }
 
 // Conn registers a function to handle client connection events.
-func (s *Server) Conn(handler func(conn *client.Client)) {
+func (s *Server) Conn(handler func(client *client.Client)) {
 	s.connHandler = handler
 }
 
@@ -111,7 +111,7 @@ func (s *Server) handleConn(c net.Conn) error {
 			return err
 		}
 
-		client, err := client.NewClient(ntlsc, &s.reqWG, s.handleDisconn, s.middlewareIn, s.middlewareOut)
+		client, err := client.NewClient(ntlsc, &s.msgWG, s.handleDisconn, s.middlewareIn, s.middlewareOut)
 		if err != nil {
 			return err
 		}
