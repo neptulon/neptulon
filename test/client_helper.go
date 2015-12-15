@@ -32,7 +32,7 @@ func NewClientHelper(t *testing.T, s *ServerHelper) *ClientHelper {
 func (c *ClientHelper) DialTLS() *ClientHelper {
 	// retry connect in case we're operating on a very slow machine
 	for i := 0; i <= 5; i++ {
-		conn, err := client.DialTLS(addr, c.server.IntCACert, c.cert, c.key, false) // no need for debug mode on conn as we have it on server conn already
+		conn, err := client.DialTLS(addr, c.server.IntCACert, c.cert, c.key, false)
 		if err != nil {
 			if operr, ok := err.(*net.OpError); ok && operr.Op == "dial" && operr.Err.Error() == "connection refused" {
 				time.Sleep(time.Millisecond * 50)
