@@ -71,6 +71,11 @@ func (s *ServerHelper) Run() {
 	time.Sleep(time.Millisecond) // give Run() enough time to initiate
 }
 
+// GetClient creates a connection to this server instance and returns it wrapped in a ClientHelper.
+func (s *ServerHelper) GetClient() *ClientHelper {
+	return nil
+}
+
 // Stop stops the server instance.
 func (s *ServerHelper) Stop() {
 	if err := s.server.Stop(); err != nil {

@@ -87,7 +87,7 @@ func (s *Server) Stop() error {
 	// close all active connections discarding any read/writes that is going on currently
 	// this is not a problem as we always require an ACK but it will also mean that message deliveries will be at-least-once; to-and-from the server
 	s.clients.Range(func(c interface{}) {
-		c.(*client.Client).Disconnect()
+		c.(*client.Client).Close()
 	})
 
 	if err != nil {
@@ -97,12 +97,12 @@ func (s *Server) Stop() error {
 	return nil
 }
 
-func (s *Server) handleConn(c net.Conn) error {
+func (s *Server) handleConn(conn net.Conn) error {
 	switch s.net {
 	case "tls":
-		tlsc, ok := c.(*tls.Conn)
+		tlsc, ok := conn.(*tls.Conn)
 		if !ok {
-			c.Close()
+			conn.Close()
 			return errors.New("cannot cast net.Conn interface to tls.Conn type")
 		}
 
@@ -111,12 +111,15 @@ func (s *Server) handleConn(c net.Conn) error {
 			return err
 		}
 
-		client := client.NewClient(&s.msgWG, s.handleDisconn).MiddlewareIn(s.middlewareIn...).MiddlewareOut(s.middlewareOut...).UseConn(nepTLSConn)
-		s.clients.Set(nepTLSConn.ID, client)
+		c := client.NewClient(&s.msgWG, s.handleDisconn)
+		c.MiddlewareIn(s.middlewareIn...)
+		c.MiddlewareOut(s.middlewareOut...)
+		c.UseConn(nepTLSConn)
+		s.clients.Set(nepTLSConn.ID, c)
 		s.connWG.Add(1)
 
 		if s.connHandler != nil {
-			s.connHandler(client)
+			s.connHandler(c)
 		}
 	}
 
