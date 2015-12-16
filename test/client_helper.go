@@ -3,6 +3,7 @@ package test
 import (
 	"io"
 	"net"
+	"sync"
 	"testing"
 	"time"
 
@@ -13,19 +14,21 @@ import (
 // All the functions are wrapped with proper test runner error logging.
 type ClientHelper struct {
 	client    *client.Client
-	server    *ServerHelper // server that this connection will be made to
 	testing   *testing.T
+	msgWG     sync.WaitGroup
 	cert, key []byte
 }
 
 // NewClientHelper creates a new client helper object.
 // Takes target server as an argument to retrieve server certs, address, etc.
-func NewClientHelper(t *testing.T, s *ServerHelper) *ClientHelper {
+func NewClientHelper(t *testing.T) *ClientHelper {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short testing mode")
 	}
 
-	return &ClientHelper{testing: t, server: s}
+	ch := &ClientHelper{testing: t}
+	ch.client = client.NewClient(&ch.msgWG, nil)
+	return ch
 }
 
 // DialTLS initiates a TLS connection.

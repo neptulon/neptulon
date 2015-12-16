@@ -68,7 +68,7 @@ func (s *ServerHelper) Run() {
 		s.server.Run()
 	}()
 
-	time.Sleep(time.Millisecond) // give Run() enough time to initiate
+	time.Sleep(time.Millisecond) // give Run() enough CPU cycles to initiate
 }
 
 // GetClient creates a connection to this server instance and returns it wrapped in a ClientHelper.
