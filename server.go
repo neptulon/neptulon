@@ -80,8 +80,8 @@ func (s *Server) Send(connID string, msg []byte) error {
 	return fmt.Errorf("Connection ID not found: %v", connID)
 }
 
-// Stop stops a server instance.
-func (s *Server) Stop() error {
+// Close closes the network listener and the active connections.
+func (s *Server) Close() error {
 	err := s.listener.Close()
 
 	// close all active connections discarding any read/writes that is going on currently

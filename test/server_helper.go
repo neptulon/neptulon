@@ -1,11 +1,13 @@
 package test
 
 import (
+	"crypto/x509/pkix"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/neptulon/ca"
+	"github.com/neptulon/client/test"
 	"github.com/neptulon/neptulon"
 )
 
@@ -60,26 +62,39 @@ func NewTLSServerHelper(t *testing.T) *ServerHelper {
 	}
 }
 
-// Run initializes the Neptulon server instance which is ready to accept connections after this function returns.
-func (s *ServerHelper) Run() {
+// Start starts the Neptulon server and starts accepting incoming connections.
+func (s *ServerHelper) Start() {
 	s.serverWG.Add(1)
 	go func() {
 		defer s.serverWG.Done()
-		s.server.Run()
+		s.server.Start()
 	}()
 
 	time.Sleep(time.Millisecond) // give Run() enough CPU cycles to initiate
 }
 
-// GetClient creates a connection to this server instance and returns it wrapped in a ClientHelper.
-func (s *ServerHelper) GetClient() *ClientHelper {
-	return nil
+// GetTLSClient creates a client connection to this server instance using TLS and returns the connection wrapped in a ClientHelper.
+func (s *ServerHelper) GetTLSClient(useClientCert bool) *test.ClientHelper {
+	var cert, key []byte
+	var err error
+	if useClientCert {
+		cert, key, err = ca.GenClientCert(pkix.Name{
+			Organization: []string{"FooBar"},
+			CommonName:   "1",
+		}, time.Hour, 512, s.IntCACert, s.IntCAKey)
+		if err != nil {
+			s.testing.Fatal(err)
+		}
+	}
+
+	return test.NewClientHelper(s.testing).ConnectTLS(s.Address, s.IntCACert, cert, key)
 }
 
-// Stop stops the server instance.
-func (s *ServerHelper) Stop() {
-	if err := s.server.Stop(); err != nil {
+// Close stops the server listener and connections.
+func (s *ServerHelper) Close() {
+	if err := s.server.Close(); err != nil {
 		s.testing.Fatal("Failed to stop the server:", err)
 	}
+
 	s.serverWG.Wait()
 }
