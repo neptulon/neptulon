@@ -61,9 +61,9 @@ func (s *Server) Disconn(handler func(c *client.Client)) {
 	s.disconnHandler = handler
 }
 
-// Start starts accepting connections on the internal listener and handles connections with registered middleware.
+// Accept starts accepting connections on the internal listener and handles connections with registered middleware.
 // This function blocks and never returns until the server is closed by another goroutine or an internal error occurs.
-func (s *Server) Start() error {
+func (s *Server) Accept() error {
 	if err := s.listener.Accept(s.handleConn); err != nil {
 		return fmt.Errorf("And error occured during or after accepting a new connection: %v", err)
 	}
@@ -106,7 +106,7 @@ func (s *Server) handleConn(conn net.Conn) error {
 			return errors.New("cannot cast net.Conn interface to tls.Conn type")
 		}
 
-		c := client.NewClient(&s.msgWG, s.handleDisconn)
+		c = client.NewClient(&s.msgWG, s.handleDisconn)
 		c.MiddlewareIn(s.middlewareIn...)
 		c.MiddlewareOut(s.middlewareOut...)
 		if err := c.UseTLSConn(tlsc, s.debug); err != nil {
@@ -119,7 +119,7 @@ func (s *Server) handleConn(conn net.Conn) error {
 			return errors.New("cannot cast net.Conn interface to net.TCPConn type")
 		}
 
-		c := client.NewClient(&s.msgWG, s.handleDisconn)
+		c = client.NewClient(&s.msgWG, s.handleDisconn)
 		c.MiddlewareIn(s.middlewareIn...)
 		c.MiddlewareOut(s.middlewareOut...)
 		if err := c.UseTCPConn(tcpc, s.debug); err != nil {

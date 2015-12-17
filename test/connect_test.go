@@ -12,7 +12,7 @@ import "testing"
 func TestConnectTLS(t *testing.T) {
 	sh := NewTLSServerHelper(t)
 	defer sh.Close()
-	sh.GetTLSClient(true)
+	// sh.GetTLSClient(true)
 	// defer ch.Close()
 
 	// msg := []byte("test message")

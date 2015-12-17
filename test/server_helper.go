@@ -25,8 +25,9 @@ type ServerHelper struct {
 	ServerKey []byte
 	Address string
 
-	testing  *testing.T
-	serverWG sync.WaitGroup // server instance goroutine wait group
+	testing   *testing.T
+	serverWG  sync.WaitGroup // server instance goroutine wait group
+	acceptErr error
 }
 
 // NewTLSServerHelper creates a new server helper object with Transport Layer Security.
@@ -44,13 +45,13 @@ func NewTLSServerHelper(t *testing.T) *ServerHelper {
 		t.Fatal("Failed to create TLS certificate chain:", err)
 	}
 
-	s, err := neptulon.NewTLSServer(certChain.ServerCert, certChain.ServerKey, certChain.IntCACert, laddr, false)
+	server, err := neptulon.NewTLSServer(certChain.ServerCert, certChain.ServerKey, certChain.IntCACert, laddr, false)
 	if err != nil {
 		t.Fatal("Failed to create server:", err)
 	}
 
-	return &ServerHelper{
-		Server:     s,
+	sh := &ServerHelper{
+		Server:     server,
 		RootCACert: certChain.RootCACert,
 		RootCAKey:  certChain.RootCAKey,
 		IntCACert:  certChain.IntCACert,
@@ -61,17 +62,16 @@ func NewTLSServerHelper(t *testing.T) *ServerHelper {
 
 		testing: t,
 	}
-}
 
-// Start starts the Neptulon server and starts accepting incoming connections.
-func (s *ServerHelper) Start() {
-	s.serverWG.Add(1)
+	// start the server immediately
+	sh.serverWG.Add(1)
 	go func() {
-		defer s.serverWG.Done()
-		s.Server.Start()
+		defer sh.serverWG.Done()
+		sh.acceptErr = sh.Server.Accept()
 	}()
 
-	time.Sleep(time.Millisecond) // give Run() enough CPU cycles to initiate
+	time.Sleep(time.Millisecond) // give Accept() enough CPU cycles to initiate
+	return sh
 }
 
 // GetTLSClient creates a client connection to this server instance using TLS and returns the connection wrapped in a ClientHelper.
@@ -95,6 +95,10 @@ func (s *ServerHelper) GetTLSClient(useClientCert bool) *test.ClientHelper {
 func (s *ServerHelper) Close() {
 	if err := s.Server.Close(); err != nil {
 		s.testing.Fatal("Failed to stop the server:", err)
+	}
+
+	if s.acceptErr != nil {
+		s.testing.Fatal("Failed to accept connection(s):", s.acceptErr)
 	}
 
 	s.serverWG.Wait()
