@@ -106,16 +106,14 @@ func (s *Server) handleConn(conn net.Conn) error {
 			return errors.New("cannot cast net.Conn interface to tls.Conn type")
 		}
 
-		nepTLSConn, err := client.NewTLSConn(tlsc, s.debug)
-		if err != nil {
-			return err
-		}
-
 		c := client.NewClient(&s.msgWG, s.handleDisconn)
 		c.MiddlewareIn(s.middlewareIn...)
 		c.MiddlewareOut(s.middlewareOut...)
-		c.UseConn(nepTLSConn)
-		s.clients.Set(nepTLSConn.ID, c)
+		if err := c.UseTLSConn(tlsc, s.debug); err != nil {
+			return err
+		}
+
+		s.clients.Set(c.Conn.ID, c)
 		s.connWG.Add(1)
 
 		if s.connHandler != nil {
