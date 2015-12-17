@@ -14,6 +14,8 @@ import (
 // ServerHelper is a neptulon.Server wrapper for testing.
 // All the functions are wrapped with proper test runner error logging.
 type ServerHelper struct {
+	Server *neptulon.Server
+
 	// PEM encoded X.509 certificate and private key pairs, if TLS server is used
 	RootCACert,
 	RootCAKey,
@@ -24,7 +26,6 @@ type ServerHelper struct {
 	Address string
 
 	testing  *testing.T
-	server   *neptulon.Server
 	serverWG sync.WaitGroup // server instance goroutine wait group
 }
 
@@ -49,6 +50,7 @@ func NewTLSServerHelper(t *testing.T) *ServerHelper {
 	}
 
 	return &ServerHelper{
+		Server:     s,
 		RootCACert: certChain.RootCACert,
 		RootCAKey:  certChain.RootCAKey,
 		IntCACert:  certChain.IntCACert,
@@ -58,7 +60,6 @@ func NewTLSServerHelper(t *testing.T) *ServerHelper {
 		Address:    laddr,
 
 		testing: t,
-		server:  s,
 	}
 }
 
@@ -67,7 +68,7 @@ func (s *ServerHelper) Start() {
 	s.serverWG.Add(1)
 	go func() {
 		defer s.serverWG.Done()
-		s.server.Start()
+		s.Server.Start()
 	}()
 
 	time.Sleep(time.Millisecond) // give Run() enough CPU cycles to initiate
@@ -92,7 +93,7 @@ func (s *ServerHelper) GetTLSClient(useClientCert bool) *test.ClientHelper {
 
 // Close stops the server listener and connections.
 func (s *ServerHelper) Close() {
-	if err := s.server.Close(); err != nil {
+	if err := s.Server.Close(); err != nil {
 		s.testing.Fatal("Failed to stop the server:", err)
 	}
 
