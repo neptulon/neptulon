@@ -15,7 +15,7 @@ import (
 // Server is a Neptulon server.
 type Server struct {
 	debug          bool
-	net            string // "tls", "tcp", "tcp4", "tcp6", "unix" or "unixpacket"
+	tls            bool
 	listener       *listener
 	clients        *cmap.CMap // conn ID -> Client
 	connWG         sync.WaitGroup
@@ -37,7 +37,7 @@ func NewTLSServer(cert, privKey, clientCACert []byte, laddr string, debug bool) 
 		debug:    debug,
 		listener: l,
 		clients:  cmap.New(),
-		net:      "tls",
+		tls:      true,
 	}, nil
 }
 
@@ -98,8 +98,8 @@ func (s *Server) Close() error {
 }
 
 func (s *Server) handleConn(conn net.Conn) error {
-	switch s.net {
-	case "tls":
+	var c *client.Client
+	if s.tls {
 		tlsc, ok := conn.(*tls.Conn)
 		if !ok {
 			conn.Close()
@@ -112,16 +112,29 @@ func (s *Server) handleConn(conn net.Conn) error {
 		if err := c.UseTLSConn(tlsc, s.debug); err != nil {
 			return err
 		}
+	} else {
+		tcpc, ok := conn.(*net.TCPConn)
+		if !ok {
+			conn.Close()
+			return errors.New("cannot cast net.Conn interface to net.TCPConn type")
+		}
 
-		s.clients.Set(c.Conn.ID, c)
-		s.connWG.Add(1)
-
-		if s.connHandler != nil {
-			s.connHandler(c)
+		c := client.NewClient(&s.msgWG, s.handleDisconn)
+		c.MiddlewareIn(s.middlewareIn...)
+		c.MiddlewareOut(s.middlewareOut...)
+		if err := c.UseTCPConn(tcpc, s.debug); err != nil {
+			return err
 		}
 	}
 
-	return errors.New("connection is of unknown type")
+	s.clients.Set(c.Conn.ID, c)
+	s.connWG.Add(1)
+
+	if s.connHandler != nil {
+		s.connHandler(c)
+	}
+
+	return nil
 }
 
 func (s *Server) handleDisconn(c *client.Client) {
