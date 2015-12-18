@@ -16,6 +16,7 @@ func TestConnectTLS(t *testing.T) {
 	defer ch.Close()
 
 	// todo: solve multiple close error messages first
+	// todo: enable debug mode both on client & server if debug env var is defined during test launch
 
 	// var wg sync.WaitGroup
 	// msg := []byte("test message")
