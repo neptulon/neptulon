@@ -25,7 +25,7 @@ func TestConnectTLS(t *testing.T) {
 	ch := sh.GetTLSClient(true)
 	defer ch.Close()
 
-	// todo: enable debug mode both on client & server if debug env var is defined during test launch
+	// todo: enable debug mode both on client & server if debug env var is defined during test launch or GO_ENV=debug (as we do in Titan.Conf)
 
 	var wg sync.WaitGroup
 	msg := []byte("test message")
