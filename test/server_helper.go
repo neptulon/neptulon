@@ -25,9 +25,9 @@ type ServerHelper struct {
 	ServerKey []byte
 	Address string
 
-	testing   *testing.T
-	serverWG  sync.WaitGroup // server instance goroutine wait group
-	acceptErr error
+	testing  *testing.T
+	serverWG sync.WaitGroup // server instance goroutine wait group
+	startErr error
 }
 
 // NewTLSServerHelper creates a new server helper object with Transport Layer Security.
@@ -67,7 +67,7 @@ func NewTLSServerHelper(t *testing.T) *ServerHelper {
 	sh.serverWG.Add(1)
 	go func() {
 		defer sh.serverWG.Done()
-		sh.acceptErr = sh.Server.Accept()
+		sh.startErr = sh.Server.Start()
 	}()
 
 	time.Sleep(time.Millisecond) // give Accept() enough CPU cycles to initiate
@@ -97,8 +97,8 @@ func (s *ServerHelper) Close() {
 		s.testing.Fatal("Failed to stop the server:", err)
 	}
 
-	if s.acceptErr != nil {
-		s.testing.Fatal("Failed to accept connection(s):", s.acceptErr)
+	if s.startErr != nil {
+		s.testing.Fatal("Failed to accept connection(s):", s.startErr)
 	}
 
 	s.serverWG.Wait()

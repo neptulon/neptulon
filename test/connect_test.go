@@ -20,7 +20,7 @@ func TestConnectTLS(t *testing.T) {
 	sh := NewTLSServerHelper(t)
 	defer sh.Close()
 
-	sh.Server.MiddlewareIn(middleware.Echo) // todo: data race here. we might need to add a .Start() step to server helper to prevent this
+	sh.Server.MiddlewareIn(middleware.Echo) // todo: data race here. we might need to add a .Start() step to server helper to prevent this (or not?)
 
 	ch := sh.GetTLSClient(true)
 	defer ch.Close()

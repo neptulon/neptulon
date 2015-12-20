@@ -61,9 +61,9 @@ func (s *Server) Disconn(handler func(c *client.Client)) {
 	s.disconnHandler = handler
 }
 
-// Accept starts accepting connections on the internal listener and handles connections with registered middleware.
+// Start starts accepting connections on the internal listener and handles connections with registered middleware.
 // This function blocks and never returns until the server is closed by another goroutine or an internal error occurs.
-func (s *Server) Accept() error {
+func (s *Server) Start() error {
 	if err := s.listener.Accept(s.handleConn); err != nil {
 		return fmt.Errorf("And error occured during or after accepting a new connection: %v", err)
 	}
