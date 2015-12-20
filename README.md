@@ -7,6 +7,10 @@ Neptulon is a socket framework with middleware support. Framework core is built 
 
 Neptulon framework is only ~400 lines of code, which makes it easy to fork, specialize, and maintain for specific purposes, if you need to.
 
+## TCP/TLS and WebSocket Support
+
+Currently the TCP + TLS support is in place. WebSocket support is being planned ([see #49](https://github.com/neptulon/neptulon/issues/49)). UDP/SRTP + DTLS might we considered for future if the need arises.
+
 ## Communication Protocols
 
 Neptulon is built for speed and massive scalability. For that reason, the protocol is very simple:
@@ -18,10 +22,6 @@ Neptulon is built for speed and massive scalability. For that reason, the protoc
 ```
 
 This simplicity makes client writing a breeze. We also plan to add support for WebSocket protocol for Web clients.
-
-## TLS Only
-
-Currently we only support TLS for communication. Raw TCP/UDP and DTLS support is planned for future iterations.
 
 ## JSON-RPC 2.0
 
