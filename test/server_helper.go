@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/neptulon/ca"
+	"github.com/neptulon/client"
 	"github.com/neptulon/client/test"
 	"github.com/neptulon/neptulon"
 )
@@ -50,7 +51,7 @@ func NewTLSServerHelper(t *testing.T) *ServerHelper {
 		t.Fatal("Failed to create server:", err)
 	}
 
-	sh := &ServerHelper{
+	return &ServerHelper{
 		Server:     server,
 		RootCACert: certChain.RootCACert,
 		RootCAKey:  certChain.RootCAKey,
@@ -62,7 +63,22 @@ func NewTLSServerHelper(t *testing.T) *ServerHelper {
 
 		testing: t,
 	}
+}
 
+// MiddlewareIn registers middleware to handle incoming messagesh.
+func (sh *ServerHelper) MiddlewareIn(middleware ...func(ctx *client.Ctx)) *ServerHelper {
+	sh.Server.MiddlewareIn(middleware...)
+	return sh
+}
+
+// MiddlewareOut registers middleware to handle/intercept outgoing messages before they are sent.
+func (sh *ServerHelper) MiddlewareOut(middleware ...func(ctx *client.Ctx)) *ServerHelper {
+	sh.Server.MiddlewareOut(middleware...)
+	return sh
+}
+
+// Start starts the server.
+func (sh *ServerHelper) Start() *ServerHelper {
 	// start the server immediately
 	sh.serverWG.Add(1)
 	go func() {
@@ -75,31 +91,31 @@ func NewTLSServerHelper(t *testing.T) *ServerHelper {
 }
 
 // GetTLSClient creates a client connection to this server instance using TLS and returns the connection wrapped in a ClientHelper.
-func (s *ServerHelper) GetTLSClient(useClientCert bool) *test.ClientHelper {
+func (sh *ServerHelper) GetTLSClient(useClientCert bool) *test.ClientHelper {
 	var cert, key []byte
 	var err error
 	if useClientCert {
 		cert, key, err = ca.GenClientCert(pkix.Name{
 			Organization: []string{"FooBar"},
 			CommonName:   "1",
-		}, time.Hour, 512, s.IntCACert, s.IntCAKey)
+		}, time.Hour, 512, sh.IntCACert, sh.IntCAKey)
 		if err != nil {
-			s.testing.Fatal(err)
+			sh.testing.Fatal(err)
 		}
 	}
 
-	return test.NewClientHelper(s.testing).ConnectTLS(s.Address, s.IntCACert, cert, key)
+	return test.NewClientHelper(sh.testing).ConnectTLS(sh.Address, sh.IntCACert, cert, key)
 }
 
-// Close stops the server listener and connections.
-func (s *ServerHelper) Close() {
-	if err := s.Server.Close(); err != nil {
-		s.testing.Fatal("Failed to stop the server:", err)
+// Close stops the server listener and connectionsh.
+func (sh *ServerHelper) Close() {
+	if err := sh.Server.Close(); err != nil {
+		sh.testing.Fatal("Failed to stop the server:", err)
 	}
 
-	if s.startErr != nil {
-		s.testing.Fatal("Failed to accept connection(s):", s.startErr)
+	if sh.startErr != nil {
+		sh.testing.Fatal("Failed to accept connection(s):", sh.startErr)
 	}
 
-	s.serverWG.Wait()
+	sh.serverWG.Wait()
 }
