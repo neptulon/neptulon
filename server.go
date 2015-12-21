@@ -2,8 +2,10 @@
 package neptulon
 
 import (
+	"crypto/tls"
+	"errors"
 	"fmt"
-	"log"
+	"net"
 	"sync"
 
 	"github.com/neptulon/client"
@@ -13,100 +15,132 @@ import (
 // Server is a Neptulon server.
 type Server struct {
 	debug          bool
-	err            error
-	errMutex       sync.RWMutex
-	listener       *Listener
-	middleware     []func(ctx *client.Ctx)
-	conns          *cmap.CMap // conn ID -> Conn
-	connHandler    func(conn *client.Conn)
-	disconnHandler func(conn *client.Conn)
+	tls            bool
+	listener       *listener
+	clients        *cmap.CMap // conn ID -> Client
+	connWG         sync.WaitGroup
+	msgWG          sync.WaitGroup
+	middlewareIn   []func(ctx *client.Ctx)
+	middlewareOut  []func(ctx *client.Ctx)
+	connHandler    func(client *client.Client)
+	disconnHandler func(client *client.Client)
 }
 
 // NewTLSServer creates a Neptulon server using Transport Layer Security.
-// Debug mode dumps raw TCP data to stderr (log.Println() default).
 func NewTLSServer(cert, privKey, clientCACert []byte, laddr string, debug bool) (*Server, error) {
-	l, err := ListenTLS(cert, privKey, clientCACert, laddr, debug)
+	l, err := listenTLS(cert, privKey, clientCACert, laddr)
 	if err != nil {
 		return nil, err
 	}
 
 	return &Server{
-		debug:          debug,
-		listener:       l,
-		conns:          cmap.New(),
-		connHandler:    func(conn *client.Conn) {},
-		disconnHandler: func(conn *client.Conn) {},
+		debug:    debug,
+		listener: l,
+		clients:  cmap.New(),
+		tls:      true,
 	}, nil
 }
 
 // Conn registers a function to handle client connection events.
-func (s *Server) Conn(handler func(conn *client.Conn)) {
+func (s *Server) Conn(handler func(client *client.Client)) {
 	s.connHandler = handler
 }
 
-// Middleware registers a new middleware to handle incoming messages.
-func (s *Server) Middleware(middleware func(ctx *client.Ctx)) {
-	s.middleware = append(s.middleware, middleware)
+// MiddlewareIn registers middleware to handle incoming messages.
+func (s *Server) MiddlewareIn(middleware ...func(ctx *client.Ctx)) {
+	s.middlewareIn = append(s.middlewareIn, middleware...)
+}
+
+// MiddlewareOut registers middleware to handle/intercept outgoing messages before they are sent.
+func (s *Server) MiddlewareOut(middleware ...func(ctx *client.Ctx)) {
+	s.middlewareOut = append(s.middlewareOut, middleware...)
 }
 
 // Disconn registers a function to handle client disconnection events.
-func (s *Server) Disconn(handler func(conn *client.Conn)) {
+func (s *Server) Disconn(handler func(c *client.Client)) {
 	s.disconnHandler = handler
 }
 
-// Run starts accepting connections on the internal listener and handles connections with registered middleware.
-// This function blocks and never returns, unless there was an error while accepting a new connection or the listner was closed.
-func (s *Server) Run() error {
-	err := s.listener.Accept(s.handleConn, s.handleMsg, s.handleDisconn)
-	if err != nil && s.debug {
-		log.Fatalln("Listener returned an error while closing:", err)
+// Start starts accepting connections on the internal listener and handles connections with registered middleware.
+// This function blocks and never returns until the server is closed by another goroutine or an internal error occurs.
+func (s *Server) Start() error {
+	if err := s.listener.Accept(s.handleConn); err != nil {
+		return fmt.Errorf("And error occured during or after accepting a new connection: %v", err)
 	}
 
-	s.errMutex.Lock()
-	s.err = err
-	s.errMutex.Unlock()
-
-	return err
+	return nil
 }
 
 // Send sends a message throught the connection denoted by the connection ID.
 func (s *Server) Send(connID string, msg []byte) error {
-	if conn, ok := s.conns.GetOk(connID); ok {
-		return conn.(*client.Conn).Write(msg)
+	if c, ok := s.clients.GetOk(connID); ok {
+		return c.(*client.Client).Send(msg)
 	}
 
 	return fmt.Errorf("Connection ID not found: %v", connID)
 }
 
-// Stop stops a server instance.
-func (s *Server) Stop() error {
+// Close closes the network listener and the active connections.
+func (s *Server) Close() error {
 	err := s.listener.Close()
 
 	// close all active connections discarding any read/writes that is going on currently
 	// this is not a problem as we always require an ACK but it will also mean that message deliveries will be at-least-once; to-and-from the server
-	s.conns.Range(func(conn interface{}) {
-		conn.(*client.Conn).Close()
+	s.clients.Range(func(c interface{}) {
+		c.(*client.Client).Close()
 	})
 
-	s.errMutex.RLock()
-	if s.err != nil {
-		return fmt.Errorf("There was a recorded internal error before closing the connection: %v", s.err)
+	if err != nil {
+		return fmt.Errorf("And error occured before or while stopping the server: %v", err)
 	}
-	s.errMutex.RUnlock()
-	return err
+
+	return nil
 }
 
-func (s *Server) handleConn(conn *client.Conn) {
-	s.conns.Set(conn.ID, conn)
-	s.connHandler(conn)
+func (s *Server) handleConn(conn net.Conn) error {
+	var c *client.Client
+	if s.tls {
+		tlsc, ok := conn.(*tls.Conn)
+		if !ok {
+			conn.Close()
+			return errors.New("cannot cast net.Conn interface to tls.Conn type")
+		}
+
+		c = client.NewClient(&s.msgWG, s.handleDisconn)
+		c.MiddlewareIn(s.middlewareIn...)
+		c.MiddlewareOut(s.middlewareOut...)
+		if err := c.UseTLSConn(tlsc, s.debug); err != nil {
+			return err
+		}
+	} else {
+		tcpc, ok := conn.(*net.TCPConn)
+		if !ok {
+			conn.Close()
+			return errors.New("cannot cast net.Conn interface to net.TCPConn type")
+		}
+
+		c = client.NewClient(&s.msgWG, s.handleDisconn)
+		c.MiddlewareIn(s.middlewareIn...)
+		c.MiddlewareOut(s.middlewareOut...)
+		if err := c.UseTCPConn(tcpc, s.debug); err != nil {
+			return err
+		}
+	}
+
+	s.clients.Set(c.ConnID(), c)
+	s.connWG.Add(1)
+
+	if s.connHandler != nil {
+		s.connHandler(c)
+	}
+
+	return nil
 }
 
-func (s *Server) handleMsg(conn *client.Conn, msg []byte) {
-	ctx, _ := client.NewCtx(conn, msg, s.middleware)
-	ctx.Next()
-}
-
-func (s *Server) handleDisconn(conn *client.Conn) {
-	s.conns.Delete(conn.ID)
-	s.disconnHandler(conn)
+func (s *Server) handleDisconn(c *client.Client) {
+	s.clients.Delete(c.ConnID())
+	s.connWG.Done()
+	if s.disconnHandler != nil {
+		s.disconnHandler(c)
+	}
 }

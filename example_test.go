@@ -1,9 +1,9 @@
 package neptulon_test
 
-const debug = false
+import "fmt"
 
 // Example demonstrating the Neptulon server.
 func Example() {
-
-	// ** Output: Server started
+	fmt.Println("Server started")
+	// Output: Server started
 }
