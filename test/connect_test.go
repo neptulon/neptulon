@@ -17,24 +17,23 @@ import (
 // }
 
 func TestConnectTLS(t *testing.T) {
-	sh := NewTLSServerHelper(t).MiddlewareIn(middleware.Echo).Start()
-	defer sh.Close()
-
-	ch := sh.GetTLSClient(true)
-	defer ch.Close()
 
 	// todo: enable debug mode both on client & server if debug env var is defined during test launch or GO_ENV=debug (as we do in Titan.Conf)
+
+	sh := NewTLSServerHelper(t).MiddlewareIn(middleware.Echo).Start()
+	defer sh.Close()
 
 	var wg sync.WaitGroup
 	msg := []byte("test message")
 
-	ch.Client.MiddlewareIn(func(ctx *client.Ctx) {
+	ch := sh.GetTLSClientHelper().MiddlewareIn(func(ctx *client.Ctx) {
 		defer wg.Done()
 		if !reflect.DeepEqual(ctx.Msg, msg) {
 			t.Fatalf("expected: '%s', got: '%s'", msg, ctx.Msg)
 		}
 		ctx.Next()
-	})
+	}).Connect()
+	defer ch.Close()
 
 	wg.Add(1)
 	ch.Send(msg)

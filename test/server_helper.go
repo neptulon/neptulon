@@ -28,7 +28,6 @@ type ServerHelper struct {
 
 	testing  *testing.T
 	serverWG sync.WaitGroup // server instance goroutine wait group
-	startErr error
 }
 
 // NewTLSServerHelper creates a new server helper object with Transport Layer Security.
@@ -83,38 +82,33 @@ func (sh *ServerHelper) Start() *ServerHelper {
 	sh.serverWG.Add(1)
 	go func() {
 		defer sh.serverWG.Done()
-		sh.startErr = sh.Server.Start()
+		if err := sh.Server.Start(); err != nil {
+			sh.testing.Fatal("Failed to accept connection(s):", err)
+		}
 	}()
 
 	time.Sleep(time.Millisecond) // give Accept() enough CPU cycles to initiate
 	return sh
 }
 
-// GetTLSClient creates a client connection to this server instance using TLS and returns the connection wrapped in a ClientHelper.
-func (sh *ServerHelper) GetTLSClient(useClientCert bool) *test.ClientHelper {
-	var cert, key []byte
-	var err error
-	if useClientCert {
-		cert, key, err = ca.GenClientCert(pkix.Name{
-			Organization: []string{"FooBar"},
-			CommonName:   "1",
-		}, time.Hour, 512, sh.IntCACert, sh.IntCAKey)
-		if err != nil {
-			sh.testing.Fatal(err)
-		}
+// GetTLSClientHelper creates a client connection to this server instance using TLS and returns the connection wrapped in a ClientHelper.
+func (sh *ServerHelper) GetTLSClientHelper() *test.ClientHelper {
+	cert, key, err := ca.GenClientCert(pkix.Name{
+		Organization: []string{"FooBar"},
+		CommonName:   "1",
+	}, time.Hour, 512, sh.IntCACert, sh.IntCAKey)
+
+	if err != nil {
+		sh.testing.Fatal(err)
 	}
 
-	return test.NewClientHelper(sh.testing).ConnectTLS(sh.Address, sh.IntCACert, cert, key)
+	return test.NewClientHelper(sh.testing, sh.Address).UseTLS(sh.IntCACert, cert, key)
 }
 
 // Close stops the server listener and connectionsh.
 func (sh *ServerHelper) Close() {
 	if err := sh.Server.Close(); err != nil {
 		sh.testing.Fatal("Failed to stop the server:", err)
-	}
-
-	if sh.startErr != nil {
-		sh.testing.Fatal("Failed to accept connection(s):", sh.startErr)
 	}
 
 	sh.serverWG.Wait()
