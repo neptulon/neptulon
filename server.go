@@ -26,6 +26,20 @@ type Server struct {
 	disconnHandler func(client *client.Client)
 }
 
+// NewTCPServer creates a Neptulon TCP server.
+func NewTCPServer(laddr string, debug bool) (*Server, error) {
+	l, err := listenTCP(laddr)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Server{
+		debug:    debug,
+		listener: l,
+		clients:  cmap.New(),
+	}, nil
+}
+
 // NewTLSServer creates a Neptulon server using Transport Layer Security.
 func NewTLSServer(cert, privKey, clientCACert []byte, laddr string, debug bool) (*Server, error) {
 	l, err := listenTLS(cert, privKey, clientCACert, laddr)

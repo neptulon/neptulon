@@ -14,7 +14,21 @@ type listener struct {
 	listener net.Listener
 }
 
-// listenTLS creates a TLS listener with the given PEM encoded X.509 certificate and the private key on the local network address laddr.
+// ListenTCP creates a TCP listener on the local network address laddr.
+func listenTCP(laddr string) (*listener, error) {
+	l, err := net.Listen("tcp", laddr)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create TCP listener on network address %v with error: %v", laddr, err)
+	}
+
+	log.Printf("TCP listener created: %v\n", laddr)
+
+	return &listener{
+		listener: l,
+	}, nil
+}
+
+// ListenTLS creates a TLS listener with the given PEM encoded X.509 certificate and the private key on the local network address laddr.
 func listenTLS(cert, privKey, clientCACert []byte, laddr string) (*listener, error) {
 	tlsCert, err := tls.X509KeyPair(cert, privKey)
 	if err != nil {

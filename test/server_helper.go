@@ -12,6 +12,11 @@ import (
 	"github.com/neptulon/neptulon"
 )
 
+const (
+	host, port = "127.0.0.1", "3001"
+	laddr      = host + ":" + port
+)
+
 // ServerHelper is a neptulon.Server wrapper for testing.
 // All the functions are wrapped with proper test runner error logging.
 type ServerHelper struct {
@@ -30,14 +35,30 @@ type ServerHelper struct {
 	serverWG sync.WaitGroup // server instance goroutine wait group
 }
 
+// NewTCPServerHelper creates a new TCP server helper object.
+func NewTCPServerHelper(t *testing.T) *ServerHelper {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short testing mode")
+	}
+
+	server, err := neptulon.NewTCPServer(laddr, false)
+	if err != nil {
+		t.Fatal("Failed to create server:", err)
+	}
+
+	return &ServerHelper{
+		Server:  server,
+		Address: laddr,
+
+		testing: t,
+	}
+}
+
 // NewTLSServerHelper creates a new server helper object with Transport Layer Security.
 func NewTLSServerHelper(t *testing.T) *ServerHelper {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short testing mode")
 	}
-
-	host, port := "127.0.0.1", "3001"
-	laddr := host + ":" + port
 
 	// generate TLS certs
 	certChain, err := ca.GenCertChain("FooBar", host, host, time.Hour, 512)
@@ -91,6 +112,11 @@ func (sh *ServerHelper) Start() *ServerHelper {
 	return sh
 }
 
+// GetTCPClientHelper creates a client connection to this server instance using TCP and returns the connection wrapped in a ClientHelper.
+func (sh *ServerHelper) GetTCPClientHelper() *test.ClientHelper {
+	return test.NewClientHelper(sh.testing, sh.Address)
+}
+
 // GetTLSClientHelper creates a client connection to this server instance using TLS and returns the connection wrapped in a ClientHelper.
 func (sh *ServerHelper) GetTLSClientHelper() *test.ClientHelper {
 	cert, key, err := ca.GenClientCert(pkix.Name{
@@ -102,7 +128,7 @@ func (sh *ServerHelper) GetTLSClientHelper() *test.ClientHelper {
 		sh.testing.Fatal(err)
 	}
 
-	return test.NewClientHelper(sh.testing, sh.Address).UseTLS(sh.IntCACert, cert, key)
+	return sh.GetTCPClientHelper().UseTLS(sh.IntCACert, cert, key)
 }
 
 // Close stops the server listener and connectionsh.
