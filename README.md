@@ -55,7 +55,7 @@ All the tests can be executed with `GORACE="halt_on_error=1" go test -race -cove
 
 We designed Neptulon with a singular focus with minimal dependencies. Using another framework is risky on long term if your project grows as you'll have to maintain it yourself at some point. Below are the options that we evaluated and why Neptulon came to be.
 
-Neptulon (Go):
+**Neptulon (Go)**:
 * Very small codebase with singular focus making it possible to specialize and maintain if necessary.
 * Middleware based as in Express.
 * Blazingly fast and secure with optional TLS session reuse and client certificate authentication, making it fit for millions of connections per machine.
@@ -63,7 +63,7 @@ Neptulon (Go):
 * Other platform clients are all < ~200 lines of code, thanks to simple protocol.
 * Big bet on Go's future and big dependency on Go runtime and std lib.
 
-Koding Kite (Go):
+**Koding Kite (Go)**:
 * Large codebase with extra features.
 * WebSocket based. Adds HTTP/WebSockets as dependencies which makes client connection phase very bloated.
 * Similar interface to `go/http` package.
@@ -71,14 +71,14 @@ Koding Kite (Go):
 * Can reuse existing WebSocket client packages on any platform.
 * Big bet on Go's future and big dependency on Go runtime and std lib.
 
-Google gRPC (Go/C):
+**Google gRPC (Go/C)**:
 * Go and C mixed code base which is gigantic for what it does. Huge amount of extra features.
 * Monolithic with plugins.
 * Uses protocol-buffers with optional JSON plugin.
 * Different platform clients are provided but they are quite big in code size.
 * Common platform is written in C and hence does not have a singular runtime or std lib dependency.
 
-Node.js + WebSockets (JavaScript):
+**Node.js + WebSockets (JavaScript)**:
 * This was our initial approach. Existing libraries and frameworks are amazing. On the other hand, getting TLS session reuse, client cert authentication, etc. to work requires more effort than writing entire Neptulon framework.
 * Lots of moving parts are out of our control.
 * Big bet on Node's future and big dependency on V8 runtime and std lib.
