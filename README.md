@@ -29,6 +29,23 @@ This simplicity makes client writing a breeze. We also plan to add support for W
 
 ## Example
 
+Following is a raw TCP server for echoing all incoming messages as is to the client.
+
+```go
+s, err := neptulon.NewTCPServer("127.0.0.1:3001", false)
+if err != nil {
+	log.Fatalln("Failed to start Neptulon server:", err)
+}
+
+// middleware for echoing all incoming messages as is
+s.MiddlewareIn(func(ctx *client.Ctx) {
+	ctx.Client.Send(ctx.Msg)
+	ctx.Next()
+})
+
+s.Start()
+```
+
 Following example creates a TLS listener with JSON-RPC 2.0 protocol and starts listening for 'ping' requests and replies with a typical 'pong'.
 
 ```go
