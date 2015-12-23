@@ -5,7 +5,7 @@ import "github.com/neptulon/cmap"
 // Ctx is the incoming message context.
 type Ctx struct {
 	Msg     []byte     // Message body.
-	Session *cmap.CMap // Session is a data store for storing arbitrary data within this context to communicate with middleware inthe stack.
+	Session *cmap.CMap // Session is a data store for storing arbitrary data within this context to communicate with other middleware handling this message.
 	Client  *Client    // Connected client.
 
 	m  []func(ctx *Ctx)
@@ -29,3 +29,4 @@ func (ctx *Ctx) Next() {
 // * Ctx.SessionVar("var_name"), Ctx.SetSessionVar("")
 // * Note in docs, use Client.Session if you want data to persist for entire connection and not just this message context
 // * Ctx.Send/Ctx.SendAsync(or Queue)
+// * Remove client and just expose Conn or nothing? If nothing, we need ConnSession
