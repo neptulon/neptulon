@@ -148,7 +148,7 @@ func (c *Client) Session() *cmap.CMap {
 
 // Send writes the given message to the connection immediately.
 func (c *Client) Send(msg []byte) error {
-	ctx := Ctx{Client: c, Msg: msg, m: c.middlewareOut}
+	ctx := newCtx(msg, c, c.middlewareOut)
 	ctx.Next()
 	return c.Conn.Write(ctx.Msg) // todo: Write should be the last middleware so user can opt not to call next() to intercept sending
 }
@@ -201,7 +201,7 @@ func (c *Client) receive() {
 		c.msgWG.Add(1)
 		go func() {
 			defer c.msgWG.Done()
-			ctx := Ctx{Client: c, Msg: msg, m: c.middlewareIn}
+			ctx := newCtx(msg, c, c.middlewareIn)
 			ctx.Next()
 		}()
 	}
