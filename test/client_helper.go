@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/neptulon/client"
+	"github.com/neptulon/neptulon/client"
 )
 
 // ClientHelper is a client.Client wrapper for testing.

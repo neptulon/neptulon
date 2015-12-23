@@ -3,8 +3,8 @@ package neptulon_test
 import (
 	"log"
 
-	"github.com/neptulon/client"
 	"github.com/neptulon/neptulon"
+	"github.com/neptulon/neptulon/client"
 )
 
 // Example demonstrating the Neptulon server.

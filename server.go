@@ -8,8 +8,8 @@ import (
 	"net"
 	"sync"
 
-	"github.com/neptulon/client"
 	"github.com/neptulon/cmap"
+	"github.com/neptulon/neptulon/client"
 )
 
 // Server is a Neptulon server.

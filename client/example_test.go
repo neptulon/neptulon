@@ -3,7 +3,7 @@ package client_test
 import (
 	"fmt"
 
-	"github.com/neptulon/client"
+	"github.com/neptulon/neptulon/client"
 )
 
 // Example demonstrating the Neptulon client.

@@ -5,7 +5,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/neptulon/client"
+	"github.com/neptulon/neptulon/client"
 	"github.com/neptulon/neptulon/middleware"
 )
 
