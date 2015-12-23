@@ -85,7 +85,7 @@ func (s *Server) Start() error {
 	return nil
 }
 
-// Send sends a message throught the connection denoted by the connection ID.
+// Send writes a message to the connection denoted by the connection ID.
 func (s *Server) Send(connID string, msg []byte) error {
 	if c, ok := s.clients.GetOk(connID); ok {
 		return c.(*client.Client).Send(msg)
