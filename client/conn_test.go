@@ -87,3 +87,8 @@ func TestReadWrite(t *testing.T) {
 	// 	t.Fatal(err)
 	// }
 }
+
+func TestSimultaneousWrite(t *testing.T) {
+	// t.Fatalln("Failed to receive simultaneously written and TCP interleaved messages in the correct order:", err)
+	// if this is the case, we might need to merge header+payload before sending instead of sending them in two step order
+}
