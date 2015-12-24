@@ -16,12 +16,12 @@ func TestConnectTCP(t *testing.T) {
 	var wg sync.WaitGroup
 	msg := []byte("test message")
 
-	ch := sh.GetTCPClientHelper().MiddlewareIn(func(ctx *client.Ctx) {
+	ch := sh.GetTCPClientHelper().MiddlewareIn(func(ctx *client.Ctx) error {
 		defer wg.Done()
 		if !reflect.DeepEqual(ctx.Msg, msg) {
 			t.Fatalf("expected: '%s', got: '%s'", msg, ctx.Msg)
 		}
-		ctx.Next()
+		return ctx.Next()
 	}).Connect()
 	defer ch.Close()
 
@@ -37,12 +37,12 @@ func TestConnectTLS(t *testing.T) {
 	var wg sync.WaitGroup
 	msg := []byte("test message")
 
-	ch := sh.GetTLSClientHelper().MiddlewareIn(func(ctx *client.Ctx) {
+	ch := sh.GetTLSClientHelper().MiddlewareIn(func(ctx *client.Ctx) error {
 		defer wg.Done()
 		if !reflect.DeepEqual(ctx.Msg, msg) {
 			t.Fatalf("expected: '%s', got: '%s'", msg, ctx.Msg)
 		}
-		ctx.Next()
+		return ctx.Next()
 	}).Connect()
 	defer ch.Close()
 

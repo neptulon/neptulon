@@ -11,9 +11,9 @@ import (
 // running a single echo middleware which echoes all incoming messages back.
 func Example() {
 	c := client.NewClient(nil, nil)
-	c.MiddlewareIn(func(ctx *client.Ctx) {
+	c.MiddlewareIn(func(ctx *client.Ctx) error {
 		fmt.Println("Server's reply:", ctx.Msg)
-		ctx.Next()
+		return ctx.Next()
 	})
 	c.ConnectTCP("127.0.0.1:3001", false)
 	c.Send([]byte("echo"))

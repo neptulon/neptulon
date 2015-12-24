@@ -14,8 +14,8 @@ type Client struct {
 	Conn *Conn // Low level client connection object. Avoid using this unless you need low level read/writes directly to the connection for testing.
 
 	// middleware for incoming and outgoing messages
-	middlewareIn  []func(ctx *Ctx)
-	middlewareOut []func(ctx *Ctx)
+	middlewareIn  []func(ctx *Ctx) error
+	middlewareOut []func(ctx *Ctx) error
 
 	disconnHandler func(client *Client)
 	msgWG          *sync.WaitGroup
@@ -41,12 +41,12 @@ func NewClient(msgWG *sync.WaitGroup, disconnHandler func(client *Client)) *Clie
 }
 
 // MiddlewareIn registers middleware to handle incoming messages.
-func (c *Client) MiddlewareIn(middleware ...func(ctx *Ctx)) {
+func (c *Client) MiddlewareIn(middleware ...func(ctx *Ctx) error) {
 	c.middlewareIn = append(c.middlewareIn, middleware...)
 }
 
 // MiddlewareOut registers middleware to handle/intercept outgoing messages before they are sent.
-func (c *Client) MiddlewareOut(middleware ...func(ctx *Ctx)) {
+func (c *Client) MiddlewareOut(middleware ...func(ctx *Ctx) error) {
 	c.middlewareOut = append(c.middlewareOut, middleware...)
 }
 
@@ -104,9 +104,9 @@ func (c *Client) UseTLSConn(conn *tls.Conn, debug bool) error {
 
 // Send writes the given message to the connection immediately.
 func (c *Client) Send(msg []byte) error {
-	ctx := newCtx(msg, c.Conn, c.middlewareOut)
-	ctx.Next()
-	return c.Conn.Write(ctx.Msg) // todo: Write should be the last middleware so user can opt not to call next() to intercept sending
+	ctx := newCtx(nil, c.Conn, c.middlewareOut)
+	ctx.Res = msg
+	return ctx.Next()
 }
 
 // SendAsync writes a message to the connection on a saparate gorotuine.

@@ -20,10 +20,10 @@ type Server struct {
 	clients        *cmap.CMap // conn ID -> Client
 	connWG         sync.WaitGroup
 	msgWG          sync.WaitGroup
-	middlewareIn   []func(ctx *client.Ctx)
-	middlewareOut  []func(ctx *client.Ctx)
-	connHandler    func(client *client.Client)
-	disconnHandler func(client *client.Client)
+	middlewareIn   []func(ctx *client.Ctx) error
+	middlewareOut  []func(ctx *client.Ctx) error
+	connHandler    func(client *client.Conn)
+	disconnHandler func(client *client.Conn)
 }
 
 // NewTCPServer creates a Neptulon TCP server.
@@ -56,22 +56,22 @@ func NewTLSServer(cert, privKey, clientCACert []byte, laddr string, debug bool) 
 }
 
 // Conn registers a function to handle client connection events.
-func (s *Server) Conn(handler func(client *client.Client)) {
+func (s *Server) Conn(handler func(client *client.Conn)) {
 	s.connHandler = handler
 }
 
 // MiddlewareIn registers middleware to handle incoming messages.
-func (s *Server) MiddlewareIn(middleware ...func(ctx *client.Ctx)) {
+func (s *Server) MiddlewareIn(middleware ...func(ctx *client.Ctx) error) {
 	s.middlewareIn = append(s.middlewareIn, middleware...)
 }
 
 // MiddlewareOut registers middleware to handle/intercept outgoing messages before they are sent.
-func (s *Server) MiddlewareOut(middleware ...func(ctx *client.Ctx)) {
+func (s *Server) MiddlewareOut(middleware ...func(ctx *client.Ctx) error) {
 	s.middlewareOut = append(s.middlewareOut, middleware...)
 }
 
 // Disconn registers a function to handle client disconnection events.
-func (s *Server) Disconn(handler func(c *client.Client)) {
+func (s *Server) Disconn(handler func(c *client.Conn)) {
 	s.disconnHandler = handler
 }
 
@@ -145,7 +145,7 @@ func (s *Server) handleConn(conn net.Conn) error {
 	s.connWG.Add(1)
 
 	if s.connHandler != nil {
-		s.connHandler(c)
+		s.connHandler(c.Conn)
 	}
 
 	return nil
@@ -155,6 +155,6 @@ func (s *Server) handleDisconn(c *client.Client) {
 	s.clients.Delete(c.Conn.ConnID())
 	s.connWG.Done()
 	if s.disconnHandler != nil {
-		s.disconnHandler(c)
+		s.disconnHandler(c.Conn)
 	}
 }

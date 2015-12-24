@@ -34,13 +34,13 @@ func NewClientHelper(t *testing.T, addr string) *ClientHelper {
 }
 
 // MiddlewareIn registers middleware to handle incoming messagesh.
-func (ch *ClientHelper) MiddlewareIn(middleware ...func(ctx *client.Ctx)) *ClientHelper {
+func (ch *ClientHelper) MiddlewareIn(middleware ...func(ctx *client.Ctx) error) *ClientHelper {
 	ch.Client.MiddlewareIn(middleware...)
 	return ch
 }
 
 // MiddlewareOut registers middleware to handle/intercept outgoing messages before they are sent.
-func (ch *ClientHelper) MiddlewareOut(middleware ...func(ctx *client.Ctx)) *ClientHelper {
+func (ch *ClientHelper) MiddlewareOut(middleware ...func(ctx *client.Ctx) error) *ClientHelper {
 	ch.Client.MiddlewareOut(middleware...)
 	return ch
 }
