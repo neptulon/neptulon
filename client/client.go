@@ -7,11 +7,17 @@ import (
 	"net"
 	"sync"
 	"time"
+
+	"github.com/neptulon/cmap"
+	"github.com/neptulon/shortid"
 )
 
 // Client is a Neptulon connection client using Transport Layer Security.
 type Client struct {
 	Conn *Conn // Low level client connection object. Avoid using this unless you need low level read/writes directly to the connection for testing.
+
+	connID  string
+	session *cmap.CMap
 
 	// middleware for incoming and outgoing messages
 	middlewareIn  []func(ctx *Ctx) error
@@ -35,9 +41,20 @@ func NewClient(msgWG *sync.WaitGroup, disconnHandler func(client *Client)) *Clie
 	}
 
 	return &Client{
+		session:        cmap.New(),
 		msgWG:          msgWG,
 		disconnHandler: disconnHandler,
 	}
+}
+
+// ConnID is a randomly generated unique client connection ID.
+func (c *Client) ConnID() string {
+	return c.connID
+}
+
+// Session is a thread-safe data store for storing arbitrary data for this connection session.
+func (c *Client) Session() *cmap.CMap {
+	return c.session
 }
 
 // MiddlewareIn registers middleware to handle incoming messages.
@@ -62,8 +79,7 @@ func (c *Client) ConnectTCP(addr string, debug bool) error {
 		return err
 	}
 
-	c.useConn(conn)
-	return nil
+	return c.useConn(conn)
 }
 
 // ConnectTLS connectes to a given network address using Transport Layer Security and starts receiving messages..
@@ -76,8 +92,7 @@ func (c *Client) ConnectTLS(addr string, ca, clientCert, clientCertKey []byte, d
 		return err
 	}
 
-	c.useConn(conn)
-	return nil
+	return c.useConn(conn)
 }
 
 // UseTCPConn reuses an established *net.TCPConn and starts receiving messages.
@@ -87,8 +102,7 @@ func (c *Client) UseTCPConn(conn *net.TCPConn, debug bool) error {
 		return err
 	}
 
-	c.useConn(tcpc)
-	return nil
+	return c.useConn(tcpc)
 }
 
 // UseTLSConn reuses an established *tls.Conn and starts receiving messages.
@@ -98,8 +112,7 @@ func (c *Client) UseTLSConn(conn *tls.Conn, debug bool) error {
 		return err
 	}
 
-	c.useConn(tlsc)
-	return nil
+	return c.useConn(tlsc)
 }
 
 // Send writes the given message to the connection immediately.
@@ -125,10 +138,18 @@ func (c *Client) Close() error {
 	return c.Conn.Close()
 }
 
-func (c *Client) useConn(conn *Conn) {
+// UseConn creates a Client object wrapping an established Conn object.
+func (c *Client) useConn(conn *Conn) error {
 	if c.deadline != 0 {
 		conn.deadline = c.deadline
 	}
+
+	id, err := shortid.UUID()
+	if err != nil {
+		return err
+	}
+
+	c.connID = id
 
 	// append the last middleware to stack, which will write the response to connection, if any
 	c.middlewareOut = append(c.middlewareOut, func(ctx *Ctx) error {
@@ -142,6 +163,7 @@ func (c *Client) useConn(conn *Conn) {
 	c.Conn = conn
 	c.msgWG.Add(1)
 	go c.receive()
+	return nil
 }
 
 // Receive reads from the connection until the connection is closed.
@@ -157,13 +179,13 @@ func (c *Client) receive() {
 		if err != nil {
 			// if the connected was closed by the other end
 			if err == io.EOF {
-				log.Printf("Peer disconnected. Conn ID: %v, Remote Addr: %v\n", c.Conn.ConnID(), c.Conn.RemoteAddr())
+				log.Printf("Peer disconnected. Conn ID: %v, Remote Addr: %v\n", c.connID, c.Conn.RemoteAddr())
 				break
 			}
 
 			// if the connection was closed (possibly by us)
 			if operr, ok := err.(*net.OpError); ok && operr.Op == "read" && operr.Err.Error() == "use of closed network connection" {
-				log.Printf("Connection closed. Conn ID: %v, Remote Addr: %v\n", c.Conn.ConnID(), c.Conn.RemoteAddr())
+				log.Printf("Connection closed. Conn ID: %v, Remote Addr: %v\n", c.connID, c.Conn.RemoteAddr())
 				break
 			}
 

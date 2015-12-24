@@ -10,9 +10,6 @@ import (
 	"log"
 	"net"
 	"time"
-
-	"github.com/neptulon/cmap"
-	"github.com/neptulon/shortid"
 )
 
 // Conn is a full-duplex bidirectional connection.
@@ -21,23 +18,11 @@ import (
 type Conn struct {
 	Conn net.Conn // Inner connection object.
 
-	connID     string
-	session    *cmap.CMap
 	tls        bool
 	headerSize int
 	maxMsgSize int
 	deadline   time.Duration
 	debug      bool
-}
-
-// ConnID is a randomly generated unique client connection ID.
-func (c *Conn) ConnID() string {
-	return c.connID
-}
-
-// Session is a thread-safe data store for storing arbitrary data for this connection session.
-func (c *Conn) Session() *cmap.CMap {
-	return c.session
 }
 
 // SetDeadline set the read/write deadlines for the connection, in seconds.
@@ -191,15 +176,8 @@ func newConn(conn net.Conn, tls, debug bool) (*Conn, error) {
 		return nil, errors.New("connection object cannot be nil")
 	}
 
-	id, err := shortid.UUID()
-	if err != nil {
-		return nil, err
-	}
-
 	return &Conn{
 		Conn:       conn,
-		connID:     id,
-		session:    cmap.New(),
 		tls:        tls,
 		headerSize: 4,
 		maxMsgSize: 4294967295,

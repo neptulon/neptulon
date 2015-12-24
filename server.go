@@ -22,8 +22,8 @@ type Server struct {
 	msgWG          sync.WaitGroup
 	middlewareIn   []func(ctx *client.Ctx) error
 	middlewareOut  []func(ctx *client.Ctx) error
-	connHandler    func(client *client.Conn)
-	disconnHandler func(client *client.Conn)
+	connHandler    func(c *client.Client)
+	disconnHandler func(c *client.Client)
 }
 
 // NewTCPServer creates a Neptulon TCP server.
@@ -56,7 +56,7 @@ func NewTLSServer(cert, privKey, clientCACert []byte, laddr string, debug bool) 
 }
 
 // Conn registers a function to handle client connection events.
-func (s *Server) Conn(handler func(client *client.Conn)) {
+func (s *Server) Conn(handler func(c *client.Client)) {
 	s.connHandler = handler
 }
 
@@ -71,7 +71,7 @@ func (s *Server) MiddlewareOut(middleware ...func(ctx *client.Ctx) error) {
 }
 
 // Disconn registers a function to handle client disconnection events.
-func (s *Server) Disconn(handler func(c *client.Conn)) {
+func (s *Server) Disconn(handler func(c *client.Client)) {
 	s.disconnHandler = handler
 }
 
@@ -141,20 +141,20 @@ func (s *Server) handleConn(conn net.Conn) error {
 		}
 	}
 
-	s.clients.Set(c.Conn.ConnID(), c)
+	s.clients.Set(c.ConnID(), c)
 	s.connWG.Add(1)
 
 	if s.connHandler != nil {
-		s.connHandler(c.Conn)
+		s.connHandler(c)
 	}
 
 	return nil
 }
 
 func (s *Server) handleDisconn(c *client.Client) {
-	s.clients.Delete(c.Conn.ConnID())
+	s.clients.Delete(c.ConnID())
 	s.connWG.Done()
 	if s.disconnHandler != nil {
-		s.disconnHandler(c.Conn)
+		s.disconnHandler(c)
 	}
 }
