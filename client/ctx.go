@@ -47,3 +47,5 @@ func (ctx *Ctx) Next() error {
 
 // Ctx: msg/session-get-set/conn/res/m/mi
 // Ctx.Conn: session/connID
+
+// MiddlewareOut is very weird though, with Msg = nil, Res = msg! We might need to separate InCtx/OutCtx or just use Ctx and remove request/resp paradigm?
