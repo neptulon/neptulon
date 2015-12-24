@@ -7,9 +7,8 @@ import (
 	"time"
 
 	"github.com/neptulon/ca"
-	"github.com/neptulon/client"
-	"github.com/neptulon/client/test"
 	"github.com/neptulon/neptulon"
+	"github.com/neptulon/neptulon/client"
 )
 
 const (
@@ -86,13 +85,13 @@ func NewTLSServerHelper(t *testing.T) *ServerHelper {
 }
 
 // MiddlewareIn registers middleware to handle incoming messagesh.
-func (sh *ServerHelper) MiddlewareIn(middleware ...func(ctx *client.Ctx)) *ServerHelper {
+func (sh *ServerHelper) MiddlewareIn(middleware ...func(ctx *client.Ctx) error) *ServerHelper {
 	sh.Server.MiddlewareIn(middleware...)
 	return sh
 }
 
 // MiddlewareOut registers middleware to handle/intercept outgoing messages before they are sent.
-func (sh *ServerHelper) MiddlewareOut(middleware ...func(ctx *client.Ctx)) *ServerHelper {
+func (sh *ServerHelper) MiddlewareOut(middleware ...func(ctx *client.Ctx) error) *ServerHelper {
 	sh.Server.MiddlewareOut(middleware...)
 	return sh
 }
@@ -113,12 +112,12 @@ func (sh *ServerHelper) Start() *ServerHelper {
 }
 
 // GetTCPClientHelper creates a client connection to this server instance using TCP and returns the connection wrapped in a ClientHelper.
-func (sh *ServerHelper) GetTCPClientHelper() *test.ClientHelper {
-	return test.NewClientHelper(sh.testing, sh.Address)
+func (sh *ServerHelper) GetTCPClientHelper() *ClientHelper {
+	return NewClientHelper(sh.testing, sh.Address)
 }
 
 // GetTLSClientHelper creates a client connection to this server instance using TLS and returns the connection wrapped in a ClientHelper.
-func (sh *ServerHelper) GetTLSClientHelper() *test.ClientHelper {
+func (sh *ServerHelper) GetTLSClientHelper() *ClientHelper {
 	cert, key, err := ca.GenClientCert(pkix.Name{
 		Organization: []string{"FooBar"},
 		CommonName:   "1",

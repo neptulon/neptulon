@@ -8,8 +8,8 @@ import (
 	"net"
 	"sync"
 
-	"github.com/neptulon/client"
 	"github.com/neptulon/cmap"
+	"github.com/neptulon/neptulon/client"
 )
 
 // Server is a Neptulon server.
@@ -20,10 +20,10 @@ type Server struct {
 	clients        *cmap.CMap // conn ID -> Client
 	connWG         sync.WaitGroup
 	msgWG          sync.WaitGroup
-	middlewareIn   []func(ctx *client.Ctx)
-	middlewareOut  []func(ctx *client.Ctx)
-	connHandler    func(client *client.Client)
-	disconnHandler func(client *client.Client)
+	middlewareIn   []func(ctx *client.Ctx) error
+	middlewareOut  []func(ctx *client.Ctx) error
+	connHandler    func(c *client.Client)
+	disconnHandler func(c *client.Client)
 }
 
 // NewTCPServer creates a Neptulon TCP server.
@@ -56,17 +56,17 @@ func NewTLSServer(cert, privKey, clientCACert []byte, laddr string, debug bool) 
 }
 
 // Conn registers a function to handle client connection events.
-func (s *Server) Conn(handler func(client *client.Client)) {
+func (s *Server) Conn(handler func(c *client.Client)) {
 	s.connHandler = handler
 }
 
 // MiddlewareIn registers middleware to handle incoming messages.
-func (s *Server) MiddlewareIn(middleware ...func(ctx *client.Ctx)) {
+func (s *Server) MiddlewareIn(middleware ...func(ctx *client.Ctx) error) {
 	s.middlewareIn = append(s.middlewareIn, middleware...)
 }
 
 // MiddlewareOut registers middleware to handle/intercept outgoing messages before they are sent.
-func (s *Server) MiddlewareOut(middleware ...func(ctx *client.Ctx)) {
+func (s *Server) MiddlewareOut(middleware ...func(ctx *client.Ctx) error) {
 	s.middlewareOut = append(s.middlewareOut, middleware...)
 }
 
@@ -85,7 +85,7 @@ func (s *Server) Start() error {
 	return nil
 }
 
-// Send sends a message throught the connection denoted by the connection ID.
+// Send writes a message to the connection denoted by the connection ID.
 func (s *Server) Send(connID string, msg []byte) error {
 	if c, ok := s.clients.GetOk(connID); ok {
 		return c.(*client.Client).Send(msg)

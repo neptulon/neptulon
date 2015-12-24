@@ -3,8 +3,8 @@ package neptulon_test
 import (
 	"log"
 
-	"github.com/neptulon/client"
 	"github.com/neptulon/neptulon"
+	"github.com/neptulon/neptulon/client"
 )
 
 // Example demonstrating the Neptulon server.
@@ -15,9 +15,12 @@ func Example() {
 	}
 
 	// middleware for echoing all incoming messages as is
-	s.MiddlewareIn(func(ctx *client.Ctx) {
-		ctx.Client.Send(ctx.Msg)
-		ctx.Next()
+	s.MiddlewareIn(func(ctx *client.Ctx) error {
+		if err := ctx.Client.Send(ctx.Msg); err != nil {
+			return err
+		}
+
+		return ctx.Next()
 	})
 
 	s.Start()
