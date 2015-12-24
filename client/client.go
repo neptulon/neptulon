@@ -197,7 +197,9 @@ func (c *Client) receive() {
 		go func() {
 			defer c.msgWG.Done()
 			ctx := newCtx(msg, c, c.middlewareIn)
-			ctx.Next()
+			if err := ctx.Next(); err != nil {
+				log.Println("Unhandled error in middleware stack:", err)
+			}
 		}()
 	}
 }
