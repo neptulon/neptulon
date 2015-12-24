@@ -10,6 +10,8 @@ import (
 	"log"
 	"net"
 	"time"
+
+	"github.com/neptulon/cmap"
 )
 
 // Conn is a full-duplex bidirectional connection.
@@ -23,6 +25,8 @@ type Conn struct {
 	headerSize   int
 	maxMsgSize   int
 	readDeadline time.Duration
+	connID       string
+	session      *cmap.CMap
 }
 
 // SetReadDeadline set the read deadline for the connection in seconds.
