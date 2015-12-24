@@ -16,6 +16,11 @@ func newCtx(msg []byte, client *Client, mw []func(ctx *Ctx) error) *Ctx {
 	return &Ctx{Msg: msg, Client: client, mw: mw, session: cmap.New()}
 }
 
+// Session is a data store for storing arbitrary data within this context to communicate with other middleware handling this message.
+func (ctx *Ctx) Session() *cmap.CMap {
+	return ctx.session
+}
+
 // Next executes the next middleware in the middleware stack.
 func (ctx *Ctx) Next() error {
 	ctx.mwIndex++
@@ -26,16 +31,3 @@ func (ctx *Ctx) Next() error {
 
 	return nil
 }
-
-// Session is a data store for storing arbitrary data within this context to communicate with other middleware handling this message.
-
-// todo:
-// * Ctx.SessionVar("var_name"), Ctx.SetSessionVar("")
-// * Note in docs, use Client.Session if you want data to persist for entire connection and not just this message context
-// * Ctx.Send/Ctx.SendAsync(or Queue)
-// * Remove client and just expose Conn or nothing? If nothing, we need ConnSession
-
-// Ctx: msg/session-get-set/conn/res/m/mi
-// Ctx.Conn: session/connID
-
-// MiddlewareOut is very weird though, with Msg = nil, Res = msg! We might need to separate InCtx/OutCtx or just use Ctx and remove request/resp paradigm?
