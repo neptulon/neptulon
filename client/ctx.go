@@ -4,26 +4,16 @@ import "github.com/neptulon/cmap"
 
 // Ctx is the incoming message context.
 type Ctx struct {
-	Msg  []byte // Incoming message.
-	Res  []byte // Response message.
-	Conn *Conn  // Client connection.
+	Msg    []byte  // Message body.
+	Client *Client // Connected client.
 
 	mw      []func(ctx *Ctx) error
 	mwIndex int
 	session *cmap.CMap
 }
 
-func newCtx(msg []byte, conn *Conn, mw []func(ctx *Ctx) error) *Ctx {
-	// append the last middleware to stack, which will write the response to connection, if any
-	mw = append(mw, func(ctx *Ctx) error {
-		if ctx.Res != nil {
-			return ctx.Conn.Write(ctx.Res)
-		}
-
-		return nil
-	})
-
-	return &Ctx{Msg: msg, Conn: conn, mw: mw, session: cmap.New()}
+func newCtx(msg []byte, client *Client, mw []func(ctx *Ctx) error) *Ctx {
+	return &Ctx{Msg: msg, Client: client, mw: mw, session: cmap.New()}
 }
 
 // Next executes the next middleware in the middleware stack.

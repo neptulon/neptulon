@@ -104,9 +104,7 @@ func (c *Client) UseTLSConn(conn *tls.Conn, debug bool) error {
 
 // Send writes the given message to the connection immediately.
 func (c *Client) Send(msg []byte) error {
-	ctx := newCtx(nil, c.Conn, c.middlewareOut)
-	ctx.Res = msg
-	return ctx.Next()
+	return newCtx(msg, c, c.middlewareOut).Next()
 }
 
 // SendAsync writes a message to the connection on a saparate gorotuine.
@@ -131,6 +129,15 @@ func (c *Client) useConn(conn *Conn) {
 	if c.deadline != 0 {
 		conn.deadline = c.deadline
 	}
+
+	// append the last middleware to stack, which will write the response to connection, if any
+	c.middlewareOut = append(c.middlewareOut, func(ctx *Ctx) error {
+		if ctx.Msg != nil {
+			return ctx.Client.Conn.Write(ctx.Msg)
+		}
+
+		return nil
+	})
 
 	c.Conn = conn
 	c.msgWG.Add(1)
@@ -167,7 +174,7 @@ func (c *Client) receive() {
 		c.msgWG.Add(1)
 		go func() {
 			defer c.msgWG.Done()
-			ctx := newCtx(msg, c.Conn, c.middlewareIn)
+			ctx := newCtx(msg, c, c.middlewareIn)
 			ctx.Next()
 		}()
 	}
