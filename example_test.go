@@ -16,7 +16,7 @@ func Example() {
 
 	// middleware for echoing all incoming messages as is
 	s.MiddlewareIn(func(ctx *client.Ctx) {
-		ctx.Client.Send(ctx.Msg)
+		ctx.Conn.Write(ctx.Msg)
 		ctx.Next()
 	})
 

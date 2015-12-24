@@ -4,22 +4,14 @@ import (
 	"crypto/tls"
 	"io"
 	"log"
-	"math/rand"
 	"net"
-	"strconv"
 	"sync"
 	"time"
-
-	"github.com/neptulon/cmap"
-	"github.com/neptulon/shortid"
 )
 
 // Client is a Neptulon connection client using Transport Layer Security.
 type Client struct {
 	Conn *Conn // Low level client connection object. Avoid using this unless you need low level read/writes directly to the connection for testing.
-
-	connID  string
-	session *cmap.CMap
 
 	// middleware for incoming and outgoing messages
 	middlewareIn  []func(ctx *Ctx)
@@ -27,19 +19,13 @@ type Client struct {
 
 	disconnHandler func(client *Client)
 	msgWG          *sync.WaitGroup
-	readDeadline   int
+	deadline       time.Duration
 }
 
 // NewClient creates a new Client object.
 // msgWG = (optional) sets the given *sync.WaitGroup reference to be used for counting active gorotuines that are used for handling incoming/outgoing messages.
 // disconnHandler = (optional) registers a function to handle client disconnection events.
 func NewClient(msgWG *sync.WaitGroup, disconnHandler func(client *Client)) *Client {
-	id, err := shortid.UUID()
-	if err != nil {
-		rand.Seed(time.Now().UnixNano())
-		id = strconv.Itoa(rand.Int())
-	}
-
 	if msgWG == nil {
 		msgWG = &sync.WaitGroup{}
 	}
@@ -49,8 +35,6 @@ func NewClient(msgWG *sync.WaitGroup, disconnHandler func(client *Client)) *Clie
 	}
 
 	return &Client{
-		connID:         id,
-		session:        cmap.New(),
 		msgWG:          msgWG,
 		disconnHandler: disconnHandler,
 	}
@@ -66,9 +50,9 @@ func (c *Client) MiddlewareOut(middleware ...func(ctx *Ctx)) {
 	c.middlewareOut = append(c.middlewareOut, middleware...)
 }
 
-// SetReadDeadline set the read deadline for the connection in seconds.
-func (c *Client) SetReadDeadline(seconds int) {
-	c.readDeadline = seconds
+// SetDeadline set the read/write deadlines for the connection, in seconds.
+func (c *Client) SetDeadline(seconds int) {
+	c.deadline = time.Second * time.Duration(seconds)
 }
 
 // ConnectTCP connectes to a given network address and starts receiving messages.
@@ -78,13 +62,7 @@ func (c *Client) ConnectTCP(addr string, debug bool) error {
 		return err
 	}
 
-	if c.readDeadline != 0 {
-		conn.SetReadDeadline(c.readDeadline)
-	}
-
-	c.Conn = conn
-	c.msgWG.Add(1)
-	go c.receive()
+	c.useConn(conn)
 	return nil
 }
 
@@ -98,13 +76,7 @@ func (c *Client) ConnectTLS(addr string, ca, clientCert, clientCertKey []byte, d
 		return err
 	}
 
-	if c.readDeadline != 0 {
-		conn.SetReadDeadline(c.readDeadline)
-	}
-
-	c.Conn = conn
-	c.msgWG.Add(1)
-	go c.receive()
+	c.useConn(conn)
 	return nil
 }
 
@@ -130,25 +102,9 @@ func (c *Client) UseTLSConn(conn *tls.Conn, debug bool) error {
 	return nil
 }
 
-func (c *Client) useConn(conn *Conn) {
-	c.Conn = conn
-	c.msgWG.Add(1)
-	go c.receive()
-}
-
-// ConnID is a randomly generated unique client connection ID.
-func (c *Client) ConnID() string {
-	return c.connID
-}
-
-// Session is a thread-safe data store for storing arbitrary data for this connection session.
-func (c *Client) Session() *cmap.CMap {
-	return c.session
-}
-
 // Send writes the given message to the connection immediately.
 func (c *Client) Send(msg []byte) error {
-	ctx := newCtx(msg, c, c.middlewareOut)
+	ctx := newCtx(msg, c.Conn, c.middlewareOut)
 	ctx.Next()
 	return c.Conn.Write(ctx.Msg) // todo: Write should be the last middleware so user can opt not to call next() to intercept sending
 }
@@ -171,6 +127,16 @@ func (c *Client) Close() error {
 	return c.Conn.Close()
 }
 
+func (c *Client) useConn(conn *Conn) {
+	if c.deadline != 0 {
+		conn.deadline = c.deadline
+	}
+
+	c.Conn = conn
+	c.msgWG.Add(1)
+	go c.receive()
+}
+
 // Receive reads from the connection until the connection is closed.
 // If the connection is terminated unexpectedly, an error is logged.
 // This method blocks and does not exit until connection is closed.
@@ -184,13 +150,13 @@ func (c *Client) receive() {
 		if err != nil {
 			// if the connected was closed by the other end
 			if err == io.EOF {
-				log.Printf("Peer disconnected. Conn ID: %v, Remote Addr: %v\n", c.connID, c.Conn.RemoteAddr())
+				log.Printf("Peer disconnected. Conn ID: %v, Remote Addr: %v\n", c.Conn.ConnID(), c.Conn.RemoteAddr())
 				break
 			}
 
 			// if the connection was closed (possibly by us)
 			if operr, ok := err.(*net.OpError); ok && operr.Op == "read" && operr.Err.Error() == "use of closed network connection" {
-				log.Printf("Connection closed. Conn ID: %v, Remote Addr: %v\n", c.connID, c.Conn.RemoteAddr())
+				log.Printf("Connection closed. Conn ID: %v, Remote Addr: %v\n", c.Conn.ConnID(), c.Conn.RemoteAddr())
 				break
 			}
 
@@ -201,7 +167,7 @@ func (c *Client) receive() {
 		c.msgWG.Add(1)
 		go func() {
 			defer c.msgWG.Done()
-			ctx := newCtx(msg, c, c.middlewareIn)
+			ctx := newCtx(msg, c.Conn, c.middlewareIn)
 			ctx.Next()
 		}()
 	}

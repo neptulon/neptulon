@@ -42,7 +42,7 @@ func TestNewConn(t *testing.T) {
 		!c.debug ||
 		c.headerSize == 0 ||
 		c.maxMsgSize == 0 ||
-		c.readDeadline == 0 {
+		c.deadline == 0 {
 		t.Fatal("Conn object was misconfigured")
 	}
 }

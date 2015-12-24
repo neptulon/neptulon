@@ -141,7 +141,7 @@ func (s *Server) handleConn(conn net.Conn) error {
 		}
 	}
 
-	s.clients.Set(c.ConnID(), c)
+	s.clients.Set(c.Conn.ConnID(), c)
 	s.connWG.Add(1)
 
 	if s.connHandler != nil {
@@ -152,7 +152,7 @@ func (s *Server) handleConn(conn net.Conn) error {
 }
 
 func (s *Server) handleDisconn(c *client.Client) {
-	s.clients.Delete(c.ConnID())
+	s.clients.Delete(c.Conn.ConnID())
 	s.connWG.Done()
 	if s.disconnHandler != nil {
 		s.disconnHandler(c)

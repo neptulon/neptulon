@@ -29,7 +29,7 @@ func NewClientHelper(t *testing.T, addr string) *ClientHelper {
 
 	ch := &ClientHelper{testing: t, addr: addr}
 	ch.Client = client.NewClient(&ch.msgWG, nil)
-	ch.Client.SetReadDeadline(10)
+	ch.Client.SetDeadline(10)
 	return ch
 }
 

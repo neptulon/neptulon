@@ -12,44 +12,54 @@ import (
 	"time"
 
 	"github.com/neptulon/cmap"
+	"github.com/neptulon/shortid"
 )
 
 // Conn is a full-duplex bidirectional connection.
-// Default values for header size, maximum message size, and read deadline are
+// Default values for header size, maximum message size, and read/write deadlines are
 // 4 bytes, 2^([header size]4*8)-1 = 4294967295 bytes (4GB), and 300 seconds, respectively.
 type Conn struct {
 	Conn net.Conn // Inner connection object.
 
-	debug        bool
-	tls          bool
-	headerSize   int
-	maxMsgSize   int
-	readDeadline time.Duration
-	connID       string
-	session      *cmap.CMap
+	connID     string
+	session    *cmap.CMap
+	tls        bool
+	headerSize int
+	maxMsgSize int
+	deadline   time.Duration
+	debug      bool
 }
 
-// SetReadDeadline set the read deadline for the connection in seconds.
-func (c *Conn) SetReadDeadline(seconds int) {
-	c.readDeadline = time.Second * time.Duration(seconds)
+// ConnID is a randomly generated unique client connection ID.
+func (c *Conn) ConnID() string {
+	return c.connID
+}
+
+// Session is a thread-safe data store for storing arbitrary data for this connection session.
+func (c *Conn) Session() *cmap.CMap {
+	return c.session
+}
+
+// SetDeadline set the read/write deadlines for the connection, in seconds.
+func (c *Conn) SetDeadline(seconds int) {
+	c.deadline = time.Second * time.Duration(seconds)
 }
 
 // Read waits for and reads the next incoming message from the connection.
-func (c *Conn) Read() (msg []byte, err error) {
-	if err = c.Conn.SetReadDeadline(time.Now().Add(c.readDeadline)); err != nil {
-		return
+func (c *Conn) Read() ([]byte, error) {
+	if err := c.Conn.SetReadDeadline(time.Now().Add(c.deadline)); err != nil {
+		return nil, err
 	}
 
 	// read the content length header
 	h := make([]byte, c.headerSize)
-	var n int
-	n, err = c.Conn.Read(h)
+	n, err := c.Conn.Read(h)
 	if err != nil {
-		return
+		return nil, err
 	}
+
 	if n != c.headerSize {
-		err = fmt.Errorf("expected to read header size %v bytes but instead read %v bytes", c.headerSize, n)
-		return
+		return nil, fmt.Errorf("expected to read header size %v bytes but instead read %v bytes", c.headerSize, n)
 	}
 
 	// calculate the content length
@@ -59,7 +69,7 @@ func (c *Conn) Read() (msg []byte, err error) {
 	}
 
 	// read the message content
-	msg = make([]byte, n)
+	msg := make([]byte, n)
 	total := 0
 	for total < n {
 		// todo: log here in case it gets stuck, or there is a dos attack, pumping up cpu usage!
@@ -78,11 +88,15 @@ func (c *Conn) Read() (msg []byte, err error) {
 		log.Println("Incoming message:", string(msg))
 	}
 
-	return
+	return msg, nil
 }
 
 // Write writes given message to the connection.
 func (c *Conn) Write(msg []byte) error {
+	if err := c.Conn.SetWriteDeadline(time.Now().Add(c.deadline)); err != nil {
+		return err
+	}
+
 	l := len(msg)
 	h := makeHeaderBytes(l, c.headerSize)
 
@@ -125,21 +139,6 @@ func (c *Conn) ConnectionState() (tls.ConnectionState, error) {
 // Note: TCP/IP stack does not guarantee delivery of messages before the connection is closed.
 func (c *Conn) Close() error {
 	return c.Conn.Close() // todo: if conn.err is nil, send a close req and wait ack then close? (or even wait for everything else to finish?)
-}
-
-func newConn(conn net.Conn, tls, debug bool) (*Conn, error) {
-	if conn == nil {
-		return nil, errors.New("connection object cannot be nil")
-	}
-
-	return &Conn{
-		Conn:         conn,
-		debug:        debug,
-		tls:          tls,
-		headerSize:   4,
-		maxMsgSize:   4294967295,
-		readDeadline: time.Second * time.Duration(300),
-	}, nil
 }
 
 // DialTCP creates a new client side TCP connection to a server at the given network address.
@@ -185,6 +184,28 @@ func dialTLS(addr string, ca, clientCert, clientCertKey []byte, debug bool) (*Co
 	}
 
 	return newConn(c, true, debug)
+}
+
+func newConn(conn net.Conn, tls, debug bool) (*Conn, error) {
+	if conn == nil {
+		return nil, errors.New("connection object cannot be nil")
+	}
+
+	id, err := shortid.UUID()
+	if err != nil {
+		return nil, err
+	}
+
+	return &Conn{
+		Conn:       conn,
+		connID:     id,
+		session:    cmap.New(),
+		tls:        tls,
+		headerSize: 4,
+		maxMsgSize: 4294967295,
+		deadline:   time.Second * time.Duration(300),
+		debug:      debug,
+	}, nil
 }
 
 // makeHeaderBytes takes the size of a message in bytes and puts it into a header block in little endian encoding.
