@@ -15,7 +15,7 @@ func Example() {
 		fmt.Println("Server's reply:", ctx.Msg)
 		return ctx.Next()
 	})
-	c.ConnectTCP("127.0.0.1:3001", false)
+	c.Connect("127.0.0.1:3001", false)
 	c.Send([]byte("echo"))
 	c.Close()
 	// ** Output: Server's reply: echo

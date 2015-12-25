@@ -14,11 +14,9 @@ import (
 type ClientHelper struct {
 	Client *client.Client
 
-	testing                             *testing.T
-	addr                                string
-	serverCA, clientCert, clientCertKey []byte
-	tls                                 bool
-	msgWG                               sync.WaitGroup
+	testing *testing.T
+	addr    string
+	msgWG   sync.WaitGroup
 }
 
 // NewClientHelper creates a new client helper object.
@@ -47,26 +45,15 @@ func (ch *ClientHelper) MiddlewareOut(middleware ...func(ctx *client.Ctx) error)
 
 // UseTLS connects to server using TLS.
 func (ch *ClientHelper) UseTLS(serverCA, clientCert, clientCertKey []byte) *ClientHelper {
-	ch.tls = true
-	ch.serverCA = serverCA
-	ch.clientCert = clientCert
-	ch.clientCertKey = clientCertKey
+	ch.Client.UseTLS(serverCA, clientCert, clientCertKey)
 	return ch
 }
 
 // Connect connects to a server.
 func (ch *ClientHelper) Connect() *ClientHelper {
-	var err error
-
 	// retry connect in case we're operating on a very slow machine
 	for i := 0; i <= 5; i++ {
-		if ch.tls {
-			err = ch.Client.ConnectTLS(ch.addr, ch.serverCA, ch.clientCert, ch.clientCertKey, false)
-		} else {
-			err = ch.Client.ConnectTCP(ch.addr, false)
-		}
-
-		if err != nil {
+		if err := ch.Client.Connect(ch.addr, false); err != nil {
 			if operr, ok := err.(*net.OpError); ok && operr.Op == "dial" && operr.Err.Error() == "connection refused" {
 				time.Sleep(time.Millisecond * 50)
 				continue
