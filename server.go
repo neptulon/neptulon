@@ -22,7 +22,7 @@ type Server struct {
 	msgWG          sync.WaitGroup
 	middlewareIn   []func(ctx *client.Ctx) error
 	middlewareOut  []func(ctx *client.Ctx) error
-	connHandler    func(c *client.Client)
+	connHandler    func(c *client.Client) error
 	disconnHandler func(c *client.Client)
 }
 
@@ -56,7 +56,7 @@ func NewTLSServer(cert, privKey, clientCACert []byte, laddr string, debug bool) 
 }
 
 // Conn registers a function to handle client connection events.
-func (s *Server) Conn(handler func(c *client.Client)) {
+func (s *Server) Conn(handler func(c *client.Client) error) {
 	s.connHandler = handler
 }
 
@@ -145,7 +145,7 @@ func (s *Server) handleConn(conn net.Conn) error {
 	s.connWG.Add(1)
 
 	if s.connHandler != nil {
-		s.connHandler(c)
+		return s.connHandler(c)
 	}
 
 	return nil
