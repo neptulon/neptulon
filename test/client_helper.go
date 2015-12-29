@@ -9,7 +9,7 @@ import (
 	"github.com/neptulon/neptulon/client"
 )
 
-// ClientHelper is a client.Client wrapper for testing.
+// ClientHelper is a Neptulon Client wrapper for testing.
 // All the functions are wrapped with proper test runner error logging.
 type ClientHelper struct {
 	Client *client.Client

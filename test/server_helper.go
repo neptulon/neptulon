@@ -16,7 +16,7 @@ const (
 	laddr      = host + ":" + port
 )
 
-// ServerHelper is a neptulon.Server wrapper for testing.
+// ServerHelper is a Neptulon Server wrapper for testing.
 // All the functions are wrapped with proper test runner error logging.
 type ServerHelper struct {
 	Server *neptulon.Server
@@ -130,7 +130,7 @@ func (sh *ServerHelper) GetTLSClientHelper() *ClientHelper {
 	return sh.GetTCPClientHelper().UseTLS(sh.IntCACert, cert, key)
 }
 
-// Close stops the server listener and connectionsh.
+// Close stops the server listener and connections.
 func (sh *ServerHelper) Close() {
 	if err := sh.Server.Close(); err != nil {
 		sh.testing.Fatal("Failed to stop the server:", err)
