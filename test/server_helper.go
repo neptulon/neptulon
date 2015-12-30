@@ -8,7 +8,6 @@ import (
 
 	"github.com/neptulon/ca"
 	"github.com/neptulon/neptulon"
-	"github.com/neptulon/neptulon/client"
 )
 
 const (
@@ -85,13 +84,13 @@ func NewTLSServerHelper(t *testing.T) *ServerHelper {
 }
 
 // MiddlewareIn registers middleware to handle incoming messagesh.
-func (sh *ServerHelper) MiddlewareIn(middleware ...func(ctx *client.Ctx) error) *ServerHelper {
+func (sh *ServerHelper) MiddlewareIn(middleware ...func(ctx *neptulon.Ctx) error) *ServerHelper {
 	sh.Server.MiddlewareIn(middleware...)
 	return sh
 }
 
 // MiddlewareOut registers middleware to handle/intercept outgoing messages before they are sent.
-func (sh *ServerHelper) MiddlewareOut(middleware ...func(ctx *client.Ctx) error) *ServerHelper {
+func (sh *ServerHelper) MiddlewareOut(middleware ...func(ctx *neptulon.Ctx) error) *ServerHelper {
 	sh.Server.MiddlewareOut(middleware...)
 	return sh
 }

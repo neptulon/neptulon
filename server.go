@@ -9,7 +9,6 @@ import (
 	"sync"
 
 	"github.com/neptulon/cmap"
-	"github.com/neptulon/neptulon/client"
 )
 
 // Server is a Neptulon server.
@@ -20,10 +19,10 @@ type Server struct {
 	clients        *cmap.CMap // conn ID -> Client
 	connWG         sync.WaitGroup
 	msgWG          sync.WaitGroup
-	middlewareIn   []func(ctx *client.Ctx) error
-	middlewareOut  []func(ctx *client.Ctx) error
-	connHandler    func(c *client.Client) error
-	disconnHandler func(c *client.Client)
+	middlewareIn   []func(ctx *Ctx) error
+	middlewareOut  []func(ctx *Ctx) error
+	connHandler    func(c *Client) error
+	disconnHandler func(c *Client)
 }
 
 // NewTCPServer creates a Neptulon TCP server.
@@ -56,22 +55,22 @@ func NewTLSServer(cert, privKey, clientCACert []byte, laddr string, debug bool) 
 }
 
 // Conn registers a function to handle client connection events.
-func (s *Server) Conn(handler func(c *client.Client) error) {
+func (s *Server) Conn(handler func(c *Client) error) {
 	s.connHandler = handler
 }
 
 // MiddlewareIn registers middleware to handle incoming messages.
-func (s *Server) MiddlewareIn(middleware ...func(ctx *client.Ctx) error) {
+func (s *Server) MiddlewareIn(middleware ...func(ctx *Ctx) error) {
 	s.middlewareIn = append(s.middlewareIn, middleware...)
 }
 
 // MiddlewareOut registers middleware to handle/intercept outgoing messages before they are sent.
-func (s *Server) MiddlewareOut(middleware ...func(ctx *client.Ctx) error) {
+func (s *Server) MiddlewareOut(middleware ...func(ctx *Ctx) error) {
 	s.middlewareOut = append(s.middlewareOut, middleware...)
 }
 
 // Disconn registers a function to handle client disconnection events.
-func (s *Server) Disconn(handler func(c *client.Client)) {
+func (s *Server) Disconn(handler func(c *Client)) {
 	s.disconnHandler = handler
 }
 
@@ -88,7 +87,7 @@ func (s *Server) Start() error {
 // Send writes a message to the connection denoted by the connection ID.
 func (s *Server) Send(connID string, msg []byte) error {
 	if c, ok := s.clients.GetOk(connID); ok {
-		return c.(*client.Client).Send(msg)
+		return c.(*Client).Send(msg)
 	}
 
 	return fmt.Errorf("Connection ID not found: %v", connID)
@@ -101,7 +100,7 @@ func (s *Server) Close() error {
 	// close all active connections discarding any read/writes that is going on currently
 	// this is not a problem as we always require an ACK but it will also mean that message deliveries will be at-least-once; to-and-from the server
 	s.clients.Range(func(c interface{}) {
-		c.(*client.Client).Close()
+		c.(*Client).Close()
 	})
 
 	if err != nil {
@@ -112,7 +111,7 @@ func (s *Server) Close() error {
 }
 
 func (s *Server) handleConn(conn net.Conn) error {
-	var c *client.Client
+	var c *Client
 	if s.tls {
 		tlsc, ok := conn.(*tls.Conn)
 		if !ok {
@@ -120,7 +119,7 @@ func (s *Server) handleConn(conn net.Conn) error {
 			return errors.New("cannot cast net.Conn interface to tls.Conn type")
 		}
 
-		c = client.NewClient(&s.msgWG, s.handleDisconn)
+		c = NewClient(&s.msgWG, s.handleDisconn)
 		c.MiddlewareIn(s.middlewareIn...)
 		c.MiddlewareOut(s.middlewareOut...)
 		if err := c.UseTLSConn(tlsc, s.debug); err != nil {
@@ -133,7 +132,7 @@ func (s *Server) handleConn(conn net.Conn) error {
 			return errors.New("cannot cast net.Conn interface to net.TCPConn type")
 		}
 
-		c = client.NewClient(&s.msgWG, s.handleDisconn)
+		c = NewClient(&s.msgWG, s.handleDisconn)
 		c.MiddlewareIn(s.middlewareIn...)
 		c.MiddlewareOut(s.middlewareOut...)
 		if err := c.UseTCPConn(tcpc, s.debug); err != nil {
@@ -151,7 +150,7 @@ func (s *Server) handleConn(conn net.Conn) error {
 	return nil
 }
 
-func (s *Server) handleDisconn(c *client.Client) {
+func (s *Server) handleDisconn(c *Client) {
 	s.clients.Delete(c.ConnID())
 	s.connWG.Done()
 	if s.disconnHandler != nil {

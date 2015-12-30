@@ -6,13 +6,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/neptulon/neptulon/client"
+	"github.com/neptulon/neptulon"
 )
 
 // ClientHelper is a Neptulon Client wrapper for testing.
 // All the functions are wrapped with proper test runner error logging.
 type ClientHelper struct {
-	Client *client.Client
+	Client *neptulon.Client
 
 	testing *testing.T
 	addr    string
@@ -26,19 +26,19 @@ func NewClientHelper(t *testing.T, addr string) *ClientHelper {
 	}
 
 	ch := &ClientHelper{testing: t, addr: addr}
-	ch.Client = client.NewClient(&ch.msgWG, nil)
+	ch.Client = neptulon.NewClient(&ch.msgWG, nil)
 	ch.Client.SetDeadline(10)
 	return ch
 }
 
 // MiddlewareIn registers middleware to handle incoming messagesh.
-func (ch *ClientHelper) MiddlewareIn(middleware ...func(ctx *client.Ctx) error) *ClientHelper {
+func (ch *ClientHelper) MiddlewareIn(middleware ...func(ctx *neptulon.Ctx) error) *ClientHelper {
 	ch.Client.MiddlewareIn(middleware...)
 	return ch
 }
 
 // MiddlewareOut registers middleware to handle/intercept outgoing messages before they are sent.
-func (ch *ClientHelper) MiddlewareOut(middleware ...func(ctx *client.Ctx) error) *ClientHelper {
+func (ch *ClientHelper) MiddlewareOut(middleware ...func(ctx *neptulon.Ctx) error) *ClientHelper {
 	ch.Client.MiddlewareOut(middleware...)
 	return ch
 }
