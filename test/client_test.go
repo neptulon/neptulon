@@ -15,15 +15,5 @@ var (
 )
 
 func TestEcho(t *testing.T) {
-	// ch := startListenerAndConnection(t)
-	// ch.Client.MiddlewareIn(func(ctx *client.Ctx) {
-	// 	if string(ctx.Msg) != msg1 {
-	// 		t.Fatalf("expected: %s\ngot: %s", msg1, ctx.Msg)
-	// 	}
-	// })
-	//
-	// ch.Send([]byte(msg1))
-	//
-	// ch.Close()
-	// listenerWG.Wait()
+
 }
