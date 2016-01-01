@@ -4,7 +4,6 @@ import (
 	"log"
 
 	"github.com/neptulon/neptulon"
-	"github.com/neptulon/neptulon/client"
 )
 
 // Example demonstrating the Neptulon server.
@@ -15,7 +14,7 @@ func Example() {
 	}
 
 	// middleware for echoing all incoming messages as is
-	s.MiddlewareIn(func(ctx *client.Ctx) error {
+	s.MiddlewareIn(func(ctx *neptulon.Ctx) error {
 		if err := ctx.Client.Send(ctx.Msg); err != nil {
 			return err
 		}

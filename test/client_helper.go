@@ -6,19 +6,17 @@ import (
 	"testing"
 	"time"
 
-	"github.com/neptulon/neptulon/client"
+	"github.com/neptulon/neptulon"
 )
 
-// ClientHelper is a client.Client wrapper for testing.
+// ClientHelper is a Neptulon Client wrapper for testing.
 // All the functions are wrapped with proper test runner error logging.
 type ClientHelper struct {
-	Client *client.Client
+	Client *neptulon.Client
 
-	testing                             *testing.T
-	addr                                string
-	serverCA, clientCert, clientCertKey []byte
-	tls                                 bool
-	msgWG                               sync.WaitGroup
+	testing *testing.T
+	addr    string
+	msgWG   sync.WaitGroup
 }
 
 // NewClientHelper creates a new client helper object.
@@ -28,45 +26,34 @@ func NewClientHelper(t *testing.T, addr string) *ClientHelper {
 	}
 
 	ch := &ClientHelper{testing: t, addr: addr}
-	ch.Client = client.NewClient(&ch.msgWG, nil)
+	ch.Client = neptulon.NewClient(&ch.msgWG, nil)
 	ch.Client.SetDeadline(10)
 	return ch
 }
 
 // MiddlewareIn registers middleware to handle incoming messagesh.
-func (ch *ClientHelper) MiddlewareIn(middleware ...func(ctx *client.Ctx) error) *ClientHelper {
+func (ch *ClientHelper) MiddlewareIn(middleware ...func(ctx *neptulon.Ctx) error) *ClientHelper {
 	ch.Client.MiddlewareIn(middleware...)
 	return ch
 }
 
 // MiddlewareOut registers middleware to handle/intercept outgoing messages before they are sent.
-func (ch *ClientHelper) MiddlewareOut(middleware ...func(ctx *client.Ctx) error) *ClientHelper {
+func (ch *ClientHelper) MiddlewareOut(middleware ...func(ctx *neptulon.Ctx) error) *ClientHelper {
 	ch.Client.MiddlewareOut(middleware...)
 	return ch
 }
 
 // UseTLS connects to server using TLS.
 func (ch *ClientHelper) UseTLS(serverCA, clientCert, clientCertKey []byte) *ClientHelper {
-	ch.tls = true
-	ch.serverCA = serverCA
-	ch.clientCert = clientCert
-	ch.clientCertKey = clientCertKey
+	ch.Client.UseTLS(serverCA, clientCert, clientCertKey)
 	return ch
 }
 
 // Connect connects to a server.
 func (ch *ClientHelper) Connect() *ClientHelper {
-	var err error
-
 	// retry connect in case we're operating on a very slow machine
 	for i := 0; i <= 5; i++ {
-		if ch.tls {
-			err = ch.Client.ConnectTLS(ch.addr, ch.serverCA, ch.clientCert, ch.clientCertKey, false)
-		} else {
-			err = ch.Client.ConnectTCP(ch.addr, false)
-		}
-
-		if err != nil {
+		if err := ch.Client.Connect(ch.addr, false); err != nil {
 			if operr, ok := err.(*net.OpError); ok && operr.Op == "dial" && operr.Err.Error() == "connection refused" {
 				time.Sleep(time.Millisecond * 50)
 				continue

@@ -5,7 +5,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/neptulon/neptulon/client"
+	"github.com/neptulon/neptulon"
 	"github.com/neptulon/neptulon/middleware"
 )
 
@@ -16,7 +16,7 @@ func TestConnectTCP(t *testing.T) {
 	var wg sync.WaitGroup
 	msg := []byte("test message")
 
-	ch := sh.GetTCPClientHelper().MiddlewareIn(func(ctx *client.Ctx) error {
+	ch := sh.GetTCPClientHelper().MiddlewareIn(func(ctx *neptulon.Ctx) error {
 		defer wg.Done()
 		if !reflect.DeepEqual(ctx.Msg, msg) {
 			t.Fatalf("expected: '%s', got: '%s'", msg, ctx.Msg)
@@ -37,7 +37,7 @@ func TestConnectTLS(t *testing.T) {
 	var wg sync.WaitGroup
 	msg := []byte("test message")
 
-	ch := sh.GetTLSClientHelper().MiddlewareIn(func(ctx *client.Ctx) error {
+	ch := sh.GetTLSClientHelper().MiddlewareIn(func(ctx *neptulon.Ctx) error {
 		defer wg.Done()
 		if !reflect.DeepEqual(ctx.Msg, msg) {
 			t.Fatalf("expected: '%s', got: '%s'", msg, ctx.Msg)

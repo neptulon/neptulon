@@ -1,9 +1,9 @@
 package middleware
 
-import "github.com/neptulon/neptulon/client"
+import "github.com/neptulon/neptulon"
 
 // Echo sends incoming messages back as is.
-func Echo(ctx *client.Ctx) error {
+func Echo(ctx *neptulon.Ctx) error {
 	if err := ctx.Client.Send(ctx.Msg); err != nil {
 		return err
 	}

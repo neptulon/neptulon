@@ -1,4 +1,4 @@
-package client
+package neptulon
 
 import (
 	"crypto/tls"
@@ -12,7 +12,7 @@ import (
 	"github.com/neptulon/shortid"
 )
 
-// Client is a Neptulon connection client using Transport Layer Security.
+// Client is a Neptulon client.
 type Client struct {
 	Conn *Conn // Low level client connection object. Avoid using this unless you need low level read/writes directly to the connection for testing.
 
@@ -26,6 +26,9 @@ type Client struct {
 	disconnHandler func(client *Client)
 	msgWG          *sync.WaitGroup
 	deadline       time.Duration
+
+	tls                           bool
+	ca, clientCert, clientCertKey []byte
 }
 
 // NewClient creates a new Client object.
@@ -72,22 +75,33 @@ func (c *Client) SetDeadline(seconds int) {
 	c.deadline = time.Second * time.Duration(seconds)
 }
 
-// ConnectTCP connectes to a given network address and starts receiving messages.
-func (c *Client) ConnectTCP(addr string, debug bool) error {
-	conn, err := dialTCP(addr, debug)
-	if err != nil {
-		return err
-	}
-
-	return c.useConn(conn)
-}
-
-// ConnectTLS connectes to a given network address using Transport Layer Security and starts receiving messages..
+// UseTLS enables Transport Layer Security for the connection.
 // ca = Optional CA certificate to be used for verifying the server certificate. Useful for using self-signed server certificates.
 // clientCert, clientCertKey = Optional certificate/privat key pair for TLS client certificate authentication.
 // All certificates/private keys are in PEM encoded X.509 format.
-func (c *Client) ConnectTLS(addr string, ca, clientCert, clientCertKey []byte, debug bool) error {
-	conn, err := dialTLS(addr, ca, clientCert, clientCertKey, debug)
+func (c *Client) UseTLS(ca, clientCert, clientCertKey []byte) {
+	c.tls = true
+	c.ca = ca
+	c.clientCert = clientCert
+	c.clientCertKey = clientCertKey
+}
+
+// Connect connectes to the server at given network address and starts receiving messages.
+func (c *Client) Connect(addr string, debug bool) error {
+	var conn *Conn
+	var err error
+
+	if c.tls {
+		conn, err = dialTLS(addr, c.ca, c.clientCert, c.clientCertKey, debug)
+
+		// Conn has the certificates parsed so free up the memory as the PEM encoded X.509 certificates can be quite big
+		c.ca = nil
+		c.clientCert = nil
+		c.clientCertKey = nil
+	} else {
+		conn, err = dialTCP(addr, debug)
+	}
+
 	if err != nil {
 		return err
 	}

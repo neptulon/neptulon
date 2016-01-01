@@ -8,7 +8,6 @@ import (
 
 	"github.com/neptulon/ca"
 	"github.com/neptulon/neptulon"
-	"github.com/neptulon/neptulon/client"
 )
 
 const (
@@ -16,7 +15,7 @@ const (
 	laddr      = host + ":" + port
 )
 
-// ServerHelper is a neptulon.Server wrapper for testing.
+// ServerHelper is a Neptulon Server wrapper for testing.
 // All the functions are wrapped with proper test runner error logging.
 type ServerHelper struct {
 	Server *neptulon.Server
@@ -85,13 +84,13 @@ func NewTLSServerHelper(t *testing.T) *ServerHelper {
 }
 
 // MiddlewareIn registers middleware to handle incoming messagesh.
-func (sh *ServerHelper) MiddlewareIn(middleware ...func(ctx *client.Ctx) error) *ServerHelper {
+func (sh *ServerHelper) MiddlewareIn(middleware ...func(ctx *neptulon.Ctx) error) *ServerHelper {
 	sh.Server.MiddlewareIn(middleware...)
 	return sh
 }
 
 // MiddlewareOut registers middleware to handle/intercept outgoing messages before they are sent.
-func (sh *ServerHelper) MiddlewareOut(middleware ...func(ctx *client.Ctx) error) *ServerHelper {
+func (sh *ServerHelper) MiddlewareOut(middleware ...func(ctx *neptulon.Ctx) error) *ServerHelper {
 	sh.Server.MiddlewareOut(middleware...)
 	return sh
 }
@@ -130,7 +129,7 @@ func (sh *ServerHelper) GetTLSClientHelper() *ClientHelper {
 	return sh.GetTCPClientHelper().UseTLS(sh.IntCACert, cert, key)
 }
 
-// Close stops the server listener and connectionsh.
+// Close stops the server listener and connections.
 func (sh *ServerHelper) Close() {
 	if err := sh.Server.Close(); err != nil {
 		sh.testing.Fatal("Failed to stop the server:", err)

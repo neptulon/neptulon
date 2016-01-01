@@ -1,4 +1,4 @@
-package client
+package neptulon
 
 import "github.com/neptulon/cmap"
 
