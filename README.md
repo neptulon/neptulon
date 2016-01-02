@@ -81,7 +81,7 @@ We designed Neptulon with a singular focus with minimal dependencies. Using anot
 * Big bet on Go's future and big dependency on Go runtime and std lib.
 
 **Go net/rpc**:
-* Not bidirectional so not evaluated. Can possibly be made bidirectional with custom codec but adds bloat.
+* Not bidirectional so not evaluated. Can possibly be made bidirectional with custom codec.
 
 **Koding Kite (Go)**:
 * Large codebase with extra features.
