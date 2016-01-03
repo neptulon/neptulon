@@ -18,11 +18,13 @@ func TestEcho(t *testing.T) {
 	var wg sync.WaitGroup
 	s.Middleware(func(ctx *neptulon.ReqCtx) error {
 		defer wg.Done()
-
+		t.Log("Request received:", ctx.Method)
+		ctx.Res = "response-wow!"
 		return ctx.Next()
 	})
 
 	wg.Add(1)
+
 	origin := "http://127.0.0.1"
 	url := "ws://127.0.0.1:3010"
 	ws, err := websocket.Dial(url, "", origin)
@@ -32,5 +34,11 @@ func TestEcho(t *testing.T) {
 	if err := websocket.JSON.Send(ws, neptulon.Request{ID: "123", Method: "test"}); err != nil {
 		t.Fatal(err)
 	}
+	var res neptulon.Response
+	if err := websocket.JSON.Receive(ws, &res); err != nil {
+		t.Fatal(err)
+	}
+	t.Log("Got response:", res)
+
 	wg.Wait()
 }

@@ -4,6 +4,7 @@ package neptulon
 import (
 	"log"
 	"net/http"
+	"net/url"
 
 	"github.com/neptulon/cmap"
 
@@ -32,7 +33,13 @@ func (s *Server) Middleware(middleware ...func(ctx *ReqCtx) error) {
 
 // Start the Neptulon server. This function blocks until server is closed.
 func (s *Server) Start() error {
-	http.Handle("/", websocket.Handler(s.connHandler))
+	http.Handle("/", websocket.Server{
+		Handler: s.connHandler,
+		Handshake: func(config *websocket.Config, req *http.Request) error {
+			config.Origin, _ = url.Parse(req.RemoteAddr)
+			return nil
+		},
+	})
 	log.Println("Neptulon server started at address:", s.addr)
 	return http.ListenAndServe(s.addr, nil)
 }
