@@ -2,9 +2,7 @@ package neptulon
 
 import (
 	"crypto/tls"
-	"crypto/x509"
 	"encoding/binary"
-	"encoding/pem"
 	"errors"
 	"fmt"
 	"log"
@@ -124,51 +122,6 @@ func (c *Conn) ConnectionState() (tls.ConnectionState, error) {
 // Note: TCP/IP stack does not guarantee delivery of messages before the connection is closed.
 func (c *Conn) Close() error {
 	return c.Conn.Close() // todo: if conn.err is nil, send a close req and wait ack then close? (or even wait for everything else to finish?)
-}
-
-// DialTCP creates a new client side TCP connection to a server at the given network address.
-func dialTCP(addr string, debug bool) (*Conn, error) {
-	c, err := net.Dial("tcp", addr)
-	if err != nil {
-		return nil, err
-	}
-
-	return newConn(c, false, debug)
-}
-
-// DialTLS creates a new client side TLS connection to a server at the given network address,
-// with optional server CA and/or a client certificate (PEM encoded X.509 cert/key).
-func dialTLS(addr string, ca, clientCert, clientCertKey []byte, debug bool) (*Conn, error) {
-	var cas *x509.CertPool
-	var certs []tls.Certificate
-	if ca != nil {
-		cas = x509.NewCertPool()
-		ok := cas.AppendCertsFromPEM(ca)
-		if !ok {
-			return nil, errors.New("failed to parse the CA certificate")
-		}
-	}
-
-	if clientCert != nil {
-		tlsCert, err := tls.X509KeyPair(clientCert, clientCertKey)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse the client certificate: %v", err)
-		}
-
-		c, _ := pem.Decode(clientCert)
-		if tlsCert.Leaf, err = x509.ParseCertificate(c.Bytes); err != nil {
-			return nil, fmt.Errorf("failed to parse the client certificate: %v", err)
-		}
-
-		certs = []tls.Certificate{tlsCert}
-	}
-
-	c, err := tls.Dial("tcp", addr, &tls.Config{RootCAs: cas, Certificates: certs})
-	if err != nil {
-		return nil, err
-	}
-
-	return newConn(c, true, debug)
 }
 
 func newConn(conn net.Conn, tls, debug bool) (*Conn, error) {
