@@ -46,7 +46,7 @@ func (c *Conn) StartReceive() {
 	// append the last middleware to request stack, which will write the response to connection, if any
 	c.middleware = append(c.middleware, func(ctx *ReqCtx) error {
 		if ctx.Res != nil || ctx.Err != nil {
-			return ctx.Conn.send(&Response{ID: ctx.id, Result: ctx.Res, Error: ctx.Err})
+			return ctx.Conn.sendResponse(ctx.ID, ctx.Res, ctx.Err)
 		}
 
 		return nil
@@ -108,7 +108,7 @@ func (c *Conn) SendRequestArr(method string, resHandler func(res *Response) erro
 }
 
 // SendResponse sends a JSON-RPC response message through the connection.
-func (c *Conn) SendResponse(id string, result interface{}, err *ResError) error {
+func (c *Conn) sendResponse(id string, result interface{}, err *ResError) error {
 	return c.send(Response{ID: id, Result: result, Error: err})
 }
 
