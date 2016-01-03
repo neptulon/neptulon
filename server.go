@@ -33,10 +33,12 @@ func (s *Server) Middleware(middleware ...func(ctx *ReqCtx) error) {
 // Start the Neptulon server. This function blocks until server is closed.
 func (s *Server) Start() error {
 	http.Handle("/", websocket.Handler(s.connHandler))
+	log.Println("Neptulon server started at address:", s.addr)
 	return http.ListenAndServe(s.addr, nil)
 }
 
 func (s *Server) connHandler(ws *websocket.Conn) {
+	log.Println("Client connected:", ws.RemoteAddr())
 	c, err := NewConn(ws, s.middleware)
 	if err != nil {
 		log.Println("Error while accepting connection:", err)
@@ -46,4 +48,5 @@ func (s *Server) connHandler(ws *websocket.Conn) {
 	s.conns.Set(c.ID, c)
 	c.StartReceive()
 	s.conns.Delete(c.ID)
+	log.Println("Connection closed:", ws.RemoteAddr())
 }
