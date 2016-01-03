@@ -30,5 +30,11 @@ type message struct {
 	Method string          `json:"method,omitempty"`
 	Params json.RawMessage `json:"params,omitempty"` // request params
 	Result json.RawMessage `json:"result,omitempty"` // response result
-	Error  *ResError       `json:"error,omitempty"`  // response error
+	Error  *resError       `json:"error,omitempty"`  // response error
+}
+
+type resError struct {
+	Code    int             `json:"code"`
+	Message string          `json:"message"`
+	Data    json.RawMessage `json:"data,omitempty"`
 }
