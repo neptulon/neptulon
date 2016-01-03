@@ -27,15 +27,6 @@ type ReqCtx struct {
 }
 
 func newReqCtx(conn *Conn, id, method string, params json.RawMessage, mw []func(ctx *ReqCtx) error) *ReqCtx {
-	// append the last middleware to stack, which will write the response to connection, if any
-	mw = append(mw, func(ctx *ReqCtx) error {
-		if ctx.Res != nil || ctx.Err != nil {
-			return ctx.Conn.Send(&Response{ID: ctx.id, Result: ctx.Res, Error: ctx.Err})
-		}
-
-		return nil
-	})
-
 	return &ReqCtx{Conn: conn, Session: cmap.New(), id: id, method: method, params: params, mw: mw}
 }
 
