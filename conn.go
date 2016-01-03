@@ -14,8 +14,11 @@ type Conn struct {
 	ID      string
 	Session *cmap.CMap
 
-	ws       *websocket.Conn
-	deadline time.Duration
+	reqMiddleware []func(ctx *ReqCtx) error
+	resMiddleware []func(ctx *ResCtx) error
+	resRoutes     *cmap.CMap // message ID (string) -> handler func(ctx *ResCtx) error : expected responses for requests that we've sent
+	ws            *websocket.Conn
+	deadline      time.Duration
 }
 
 // NewConn creates a new Neptulon connection wrapping given websocket.Conn.
@@ -25,7 +28,31 @@ func NewConn(ws *websocket.Conn, reqMiddleware []func(ctx *ReqCtx) error, resMid
 		return nil, err
 	}
 
-	return &Conn{ID: id, Session: cmap.New()}, nil
+	// append the last middleware to request stack, which will write the response to connection, if any
+	reqMW := append(reqMiddleware, func(ctx *ReqCtx) error {
+		if ctx.Res != nil || ctx.Err != nil {
+			return ctx.Conn.send(&Response{ID: ctx.id, Result: ctx.Res, Error: ctx.Err})
+		}
+
+		return nil
+	})
+
+	resRoutes := cmap.New()
+
+	// append the last middleware to response stack, which will read the response for a previous request, if any
+	resMW := append(resMiddleware, func(ctx *ResCtx) error {
+		if resHandler, ok := resRoutes.GetOk(ctx.id); ok {
+			err := resHandler.(func(ctx *ResCtx) error)(ctx)
+			resRoutes.Delete(ctx.id)
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+
+	return &Conn{ID: id, Session: cmap.New(), reqMiddleware: reqMW, resMiddleware: resMW, resRoutes: resRoutes, ws: ws}, nil
 }
 
 // SetDeadline set the read/write deadlines for the connection, in seconds.

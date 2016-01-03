@@ -25,15 +25,6 @@ func NewServer(addr string) *Server {
 
 // Start the Neptulon server. This function blocks until server is closed.
 func (s *Server) Start() error {
-	// append the last middleware to stack, which will write the response to connection, if any
-	s.reqMiddleware = append(s.reqMiddleware, func(ctx *ReqCtx) error {
-		if ctx.Res != nil || ctx.Err != nil {
-			return ctx.Conn.send(&Response{ID: ctx.id, Result: ctx.Res, Error: ctx.Err})
-		}
-
-		return nil
-	})
-
 	http.Handle("/", websocket.Handler(s.connHandler))
 	return http.ListenAndServe(":12345", nil)
 }
