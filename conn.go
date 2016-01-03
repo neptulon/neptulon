@@ -60,6 +60,34 @@ func (c *Conn) SetDeadline(seconds int) {
 	c.deadline = time.Second * time.Duration(seconds)
 }
 
+// SendRequest sends a JSON-RPC request through the connection with an auto generated request ID.
+// resHandler is called when a response is returned.
+func (c *Conn) SendRequest(method string, params interface{}, resHandler func(ctx *ResCtx) error) (reqID string, err error) {
+	id, err := shortid.UUID()
+	if err != nil {
+		return "", err
+	}
+
+	req := Request{ID: id, Method: method, Params: params}
+	if err = c.send(req); err != nil {
+		return "", err
+	}
+
+	c.resRoutes.Set(req.ID, resHandler)
+	return id, nil
+}
+
+// SendRequestArr sends a JSON-RPC request through the connection, with array params and auto generated request ID.
+// resHandler is called when a response is returned.
+func (c *Conn) SendRequestArr(method string, resHandler func(ctx *ResCtx) error, params ...interface{}) (reqID string, err error) {
+	return c.SendRequest(method, params, resHandler)
+}
+
+// SendResponse sends a JSON-RPC response message through the connection.
+func (c *Conn) SendResponse(id string, result interface{}, err *ResError) error {
+	return c.send(Response{ID: id, Result: result, Error: err})
+}
+
 // Send sends the given message through the connection.
 func (c *Conn) send(msg interface{}) error {
 	if err := c.ws.SetWriteDeadline(time.Now().Add(c.deadline)); err != nil {
