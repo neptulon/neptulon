@@ -30,7 +30,12 @@ func (s *Server) Start() error {
 }
 
 func (s *Server) connHandler(ws *websocket.Conn) {
-	c := NewConn(ws)
+	c, err := NewConn(ws, s.reqMiddleware, s.resMiddleware)
+	if err != nil {
+		log.Println("Error while accepting connection:", err)
+		return
+	}
+
 	s.conns.Set(c.ID, c)
 
 	for {

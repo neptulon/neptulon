@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/neptulon/cmap"
+	"github.com/neptulon/shortid"
 
 	"golang.org/x/net/websocket"
 )
@@ -18,8 +19,13 @@ type Conn struct {
 }
 
 // NewConn creates a new Neptulon connection wrapping given websocket.Conn.
-func NewConn(ws *websocket.Conn) *Conn {
-	return &Conn{}
+func NewConn(ws *websocket.Conn, reqMiddleware []func(ctx *ReqCtx) error, resMiddleware []func(ctx *ResCtx) error) (*Conn, error) {
+	id, err := shortid.UUID()
+	if err != nil {
+		return nil, err
+	}
+
+	return &Conn{ID: id, Session: cmap.New()}, nil
 }
 
 // SetDeadline set the read/write deadlines for the connection, in seconds.
@@ -28,7 +34,7 @@ func (c *Conn) SetDeadline(seconds int) {
 }
 
 // Send sends the given message through the connection.
-func (c *Conn) Send(msg interface{}) error {
+func (c *Conn) send(msg interface{}) error {
 	if err := c.ws.SetWriteDeadline(time.Now().Add(c.deadline)); err != nil {
 		return err
 	}
@@ -37,7 +43,7 @@ func (c *Conn) Send(msg interface{}) error {
 }
 
 // Receive receives message from the connection.
-func (c *Conn) Receive(msg *message) error {
+func (c *Conn) receive(msg *message) error {
 	if err := c.ws.SetReadDeadline(time.Now().Add(c.deadline)); err != nil {
 		return err
 	}
