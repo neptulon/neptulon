@@ -4,38 +4,34 @@ package neptulon
 import (
 	"net/http"
 
+	"github.com/neptulon/cmap"
+
 	"golang.org/x/net/websocket"
 )
 
 // Server is a Neptulon server.
 type Server struct {
+	addr       string
+	conns      *cmap.CMap // conn ID -> Conn
+	middleware []func(ctx *ReqCtx) error
 }
 
 // NewServer creates a new Neptulon server.
 func NewServer(addr string) *Server {
-	return &Server{}
+	return &Server{addr: addr}
 }
 
-// This example demonstrates a trivial echo server.
-func Start() {
-	http.Handle("/", websocket.Handler(EchoServer))
-	err := http.ListenAndServe(":12345", nil)
-	if err != nil {
-		panic("ListenAndServe: " + err.Error())
-	}
+// Start the Neptulon server. This function blocks until server is closed.
+func (s *Server) Start() error {
+	http.Handle("/", websocket.Handler(s.connHandler))
+	return http.ListenAndServe(":12345", nil)
 }
 
-type T struct {
-	Msg   string
-	Count int
-}
-
-// Echo the data received on the WebSocket.
-func EchoServer(ws *websocket.Conn) {
+func (s *Server) connHandler(ws *websocket.Conn) {
 	// receive JSON type T
-	var data T
-	websocket.JSON.Receive(ws, &data)
+	var msg message
+	websocket.JSON.Receive(ws, &msg)
 
 	// send JSON type T
-	websocket.JSON.Send(ws, data)
+	websocket.JSON.Send(ws, msg)
 }
