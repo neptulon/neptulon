@@ -1,6 +1,7 @@
 package neptulon
 
 import (
+	"log"
 	"time"
 
 	"github.com/neptulon/cmap"
@@ -11,48 +12,28 @@ import (
 
 // Conn is a client connection.
 type Conn struct {
-	ID      string
-	Session *cmap.CMap
-
-	reqMiddleware []func(ctx *ReqCtx) error
-	resMiddleware []func(ctx *ResCtx) error
-	resRoutes     *cmap.CMap // message ID (string) -> handler func(ctx *ResCtx) error : expected responses for requests that we've sent
-	ws            *websocket.Conn
-	deadline      time.Duration
+	ID         string
+	Session    *cmap.CMap
+	middleware []func(ctx *ReqCtx) error
+	resRoutes  *cmap.CMap // message ID (string) -> handler func(ctx *ResCtx) error : expected responses for requests that we've sent
+	ws         *websocket.Conn
+	deadline   time.Duration
 }
 
 // NewConn creates a new Neptulon connection wrapping given websocket.Conn.
-func NewConn(ws *websocket.Conn, reqMiddleware []func(ctx *ReqCtx) error, resMiddleware []func(ctx *ResCtx) error) (*Conn, error) {
+func NewConn(ws *websocket.Conn, middleware []func(ctx *ReqCtx) error) (*Conn, error) {
 	id, err := shortid.UUID()
 	if err != nil {
 		return nil, err
 	}
 
-	// append the last middleware to request stack, which will write the response to connection, if any
-	reqMW := append(reqMiddleware, func(ctx *ReqCtx) error {
-		if ctx.Res != nil || ctx.Err != nil {
-			return ctx.Conn.send(&Response{ID: ctx.id, Result: ctx.Res, Error: ctx.Err})
-		}
-
-		return nil
-	})
-
-	resRoutes := cmap.New()
-
-	// append the last middleware to response stack, which will read the response for a previous request, if any
-	resMW := append(resMiddleware, func(ctx *ResCtx) error {
-		if resHandler, ok := resRoutes.GetOk(ctx.id); ok {
-			err := resHandler.(func(ctx *ResCtx) error)(ctx)
-			resRoutes.Delete(ctx.id)
-			if err != nil {
-				return err
-			}
-		}
-
-		return nil
-	})
-
-	return &Conn{ID: id, Session: cmap.New(), reqMiddleware: reqMW, resMiddleware: resMW, resRoutes: resRoutes, ws: ws}, nil
+	return &Conn{
+		ID:         id,
+		Session:    cmap.New(),
+		middleware: middleware,
+		resRoutes:  cmap.New(),
+		ws:         ws,
+	}, nil
 }
 
 // SetDeadline set the read/write deadlines for the connection, in seconds.
@@ -60,9 +41,52 @@ func (c *Conn) SetDeadline(seconds int) {
 	c.deadline = time.Second * time.Duration(seconds)
 }
 
+// StartReceive starts receiving messages. This method blocks and does not return until the connection is closed.
+func (c *Conn) StartReceive() {
+	// append the last middleware to request stack, which will write the response to connection, if any
+	c.middleware = append(c.middleware, func(ctx *ReqCtx) error {
+		if ctx.Res != nil || ctx.Err != nil {
+			return ctx.Conn.send(&Response{ID: ctx.id, Result: ctx.Res, Error: ctx.Err})
+		}
+
+		return nil
+	})
+
+	for {
+		var m message
+		err := c.receive(&m)
+		if err != nil {
+			log.Println("Error while receiving message:", err)
+			break
+		}
+
+		// if the message is a request
+		if m.Method != "" {
+			if err := newReqCtx(c, m.ID, m.Method, m.Params, c.middleware).Next(); err != nil {
+				log.Println("Error while handling request:", err)
+				break
+			}
+		}
+
+		// if the message is a response
+		// append the last middleware to response stack, which will read the response for a previous request, if any
+		if resHandler, ok := c.resRoutes.GetOk(m.ID); ok {
+			err := resHandler.(func(res *Response) error)(&Response{ID: m.ID, Result: m.Result, Error: m.Error})
+			c.resRoutes.Delete(m.ID)
+			if err != nil {
+				log.Println("Error while handling response:", err)
+				break
+			}
+		} else {
+			log.Println("Error while handling response: got response to a request with unknown ID:", m.ID)
+			break
+		}
+	}
+}
+
 // SendRequest sends a JSON-RPC request through the connection with an auto generated request ID.
 // resHandler is called when a response is returned.
-func (c *Conn) SendRequest(method string, params interface{}, resHandler func(ctx *ResCtx) error) (reqID string, err error) {
+func (c *Conn) SendRequest(method string, params interface{}, resHandler func(res *Response) error) (reqID string, err error) {
 	id, err := shortid.UUID()
 	if err != nil {
 		return "", err
@@ -79,7 +103,7 @@ func (c *Conn) SendRequest(method string, params interface{}, resHandler func(ct
 
 // SendRequestArr sends a JSON-RPC request through the connection, with array params and auto generated request ID.
 // resHandler is called when a response is returned.
-func (c *Conn) SendRequestArr(method string, resHandler func(ctx *ResCtx) error, params ...interface{}) (reqID string, err error) {
+func (c *Conn) SendRequestArr(method string, resHandler func(res *Response) error, params ...interface{}) (reqID string, err error) {
 	return c.SendRequest(method, params, resHandler)
 }
 

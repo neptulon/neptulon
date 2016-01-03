@@ -2,8 +2,6 @@ package neptulon
 
 import "encoding/json"
 
-// JSON-RPC 2.0 message types. Version field is ommited for brevity.
-
 // Request is a JSON-RPC request object.
 type Request struct {
 	ID     string      `json:"id"`
@@ -25,9 +23,8 @@ type ResError struct {
 	Data    interface{} `json:"data,omitempty"`
 }
 
-// message is a JSON-RPC request, response, or notification message.
-// This is used internally only to manage incoming messages.
-// We don't need this for outgoing messages as we always know their specific types.
+// message is a generic (request or response) JSON-RPC message.
+// If Method field is not empty, this is a request message, otherwise a response.
 type message struct {
 	ID     string          `json:"id,omitempty"`
 	Method string          `json:"method,omitempty"`
