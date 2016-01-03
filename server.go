@@ -2,6 +2,7 @@
 package neptulon
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/neptulon/cmap"
@@ -11,9 +12,10 @@ import (
 
 // Server is a Neptulon server.
 type Server struct {
-	addr       string
-	conns      *cmap.CMap // conn ID -> Conn
-	middleware []func(ctx *Ctx) error
+	addr          string
+	conns         *cmap.CMap // conn ID -> Conn
+	reqMiddleware []func(ctx *ReqCtx) error
+	resMiddleware []func(ctx *ResCtx) error
 }
 
 // NewServer creates a new Neptulon server.
@@ -28,18 +30,19 @@ func (s *Server) Start() error {
 }
 
 func (s *Server) connHandler(ws *websocket.Conn) {
-	// todo: we need auth middleware to work before message deserialization so shall we put deserialization into Ctx and read with byte read or put err into Ctx?
+	c := NewConn(ws)
+	s.conns.Set(c.ID, c)
 
-	// receive JSON type T
-	var m Message
-	err := websocket.JSON.Receive(ws, &m)
-	if err != nil {
-		panic(err)
-	}
+	for {
+		var m Message
+		err := c.Receive(&m)
+		if err != nil {
+			log.Println("Error while receiving message:", err)
+		}
 
-	// send JSON type T
-	err = websocket.JSON.Send(ws, m)
-	if err != nil {
-		panic(err)
+		err = c.Send(m)
+		if err != nil {
+			log.Println("Error while sending message:", err)
+		}
 	}
 }
