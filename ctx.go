@@ -63,10 +63,10 @@ type ResCtx struct {
 	ID string // Message ID.
 
 	result json.RawMessage // result parameters
-	err    *ResError       // response error (if any)
+	err    *resError       // response error (if any)
 }
 
-func newResCtx(conn *Conn, id string, result json.RawMessage, err *ResError) *ResCtx {
+func newResCtx(conn *Conn, id string, result json.RawMessage, err *resError) *ResCtx {
 	return &ResCtx{
 		Conn:   conn,
 		ID:     id,
