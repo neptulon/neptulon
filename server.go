@@ -36,7 +36,7 @@ func (s *Server) Start() error {
 	http.Handle("/", websocket.Server{
 		Handler: s.connHandler,
 		Handshake: func(config *websocket.Config, req *http.Request) error {
-			config.Origin, _ = url.Parse(req.RemoteAddr)
+			config.Origin, _ = url.Parse(req.RemoteAddr) // we're interested in remote address and not origin header text
 			return nil
 		},
 	})
