@@ -37,7 +37,7 @@ func (c *Conn) Send(msg interface{}) error {
 }
 
 // Receive receives message from the connection.
-func (c *Conn) Receive(msg *Message) error {
+func (c *Conn) Receive(msg *message) error {
 	if err := c.ws.SetReadDeadline(time.Now().Add(c.deadline)); err != nil {
 		return err
 	}

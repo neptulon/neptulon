@@ -13,9 +13,10 @@ import (
 
 // ReqCtx encapsulates connection, request, and reponse objects.
 type ReqCtx struct {
-	Conn *Conn       // Client connection.
-	Res  interface{} // Response to be returned.
-	Err  *ResError   // Error to be returned.
+	Conn    *Conn       // Client connection.
+	Session *cmap.CMap  // Session is a data store for storing arbitrary data within this context to communicate with other middleware handling this message.
+	Res     interface{} // Response to be returned.
+	Err     *ResError   // Error to be returned.
 
 	id     string          // message ID
 	method string          // called method
@@ -23,10 +24,9 @@ type ReqCtx struct {
 
 	mw      []func(ctx *ReqCtx) error
 	mwIndex int
-	session *cmap.CMap
 }
 
-func newReqCtx(id, method string, params json.RawMessage, conn *Conn, mw []func(ctx *ReqCtx) error, session *cmap.CMap) *ReqCtx {
+func newReqCtx(conn *Conn, id, method string, params json.RawMessage, mw []func(ctx *ReqCtx) error) *ReqCtx {
 	// append the last middleware to stack, which will write the response to connection, if any
 	mw = append(mw, func(ctx *ReqCtx) error {
 		if ctx.Res != nil || ctx.Err != nil {
@@ -36,12 +36,7 @@ func newReqCtx(id, method string, params json.RawMessage, conn *Conn, mw []func(
 		return nil
 	})
 
-	return &ReqCtx{Conn: conn, id: id, method: method, params: params, mw: mw}
-}
-
-// Session is a data store for storing arbitrary data within this context to communicate with other middleware handling this message.
-func (ctx *ReqCtx) Session() *cmap.CMap {
-	return ctx.session
+	return &ReqCtx{Conn: conn, Session: cmap.New(), id: id, method: method, params: params, mw: mw}
 }
 
 // Params reads request parameters into given object.
@@ -69,25 +64,19 @@ func (ctx *ReqCtx) Next() error {
 
 // ResCtx encapsulates connection and response objects.
 type ResCtx struct {
-	Conn *Conn // Client connection.
+	Conn    *Conn      // Client connection.
+	Session *cmap.CMap // Session is a data store for storing arbitrary data within this context to communicate with other middleware handling this message.
 
 	id     string          // message ID
 	result json.RawMessage // result parameters
-
-	err *ResError // response error (if any)
+	err    *ResError       // response error (if any)
 
 	mw      []func(ctx *ResCtx) error
 	mwIndex int
-	session *cmap.CMap
 }
 
-func newResCtx(id string, result json.RawMessage, conn *Conn, mw []func(ctx *ResCtx) error, session *cmap.CMap) *ResCtx {
-	return &ResCtx{Conn: conn, id: id, result: result, mw: mw}
-}
-
-// Session is a data store for storing arbitrary data within this context to communicate with other middleware handling this message.
-func (ctx *ResCtx) Session() *cmap.CMap {
-	return ctx.session
+func newResCtx(conn *Conn, id string, result json.RawMessage, mw []func(ctx *ResCtx) error) *ResCtx {
+	return &ResCtx{Conn: conn, Session: cmap.New(), id: id, result: result, mw: mw}
 }
 
 // Result reads response result data into given object.

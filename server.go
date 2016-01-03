@@ -34,15 +34,27 @@ func (s *Server) connHandler(ws *websocket.Conn) {
 	s.conns.Set(c.ID, c)
 
 	for {
-		var m Message
+		var m message
 		err := c.Receive(&m)
 		if err != nil {
 			log.Println("Error while receiving message:", err)
+			break
 		}
 
-		err = c.Send(m)
-		if err != nil {
-			log.Println("Error while sending message:", err)
+		// if the message is a request
+		if m.Method != "" {
+			if err := newReqCtx(c, m.ID, m.Method, m.Params, s.reqMiddleware).Next(); err != nil {
+				log.Println("Error while handling request:", err)
+				break
+			}
+		}
+
+		// if the message is a response
+		if err := newResCtx(c, m.ID, m.Result, s.resMiddleware).Next(); err != nil {
+			log.Println("Error while handling response:", err)
+			break
 		}
 	}
+
+	s.conns.Delete(c.ID)
 }

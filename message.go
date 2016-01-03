@@ -25,8 +25,10 @@ type ResError struct {
 	Data    interface{} `json:"data,omitempty"`
 }
 
-// Message is a JSON-RPC request or response message.
-type Message struct {
+// message is a JSON-RPC request, response, or notification message.
+// This is used internally only to manage incoming messages.
+// We don't need this for outgoing messages as we always know their specific types.
+type message struct {
 	ID     string          `json:"id,omitempty"`
 	Method string          `json:"method,omitempty"`
 	Params json.RawMessage `json:"params,omitempty"` // request params
