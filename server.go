@@ -13,7 +13,7 @@ import (
 type Server struct {
 	addr       string
 	conns      *cmap.CMap // conn ID -> Conn
-	middleware []func(ctx *ReqCtx) error
+	middleware []func(ctx *Ctx) error
 }
 
 // NewServer creates a new Neptulon server.
@@ -28,10 +28,18 @@ func (s *Server) Start() error {
 }
 
 func (s *Server) connHandler(ws *websocket.Conn) {
+	// todo: we need auth middleware to work before message deserialization so shall we put deserialization into Ctx and read with byte read or put err into Ctx?
+
 	// receive JSON type T
-	var msg message
-	websocket.JSON.Receive(ws, &msg)
+	var m Message
+	err := websocket.JSON.Receive(ws, &m)
+	if err != nil {
+		panic(err)
+	}
 
 	// send JSON type T
-	websocket.JSON.Send(ws, msg)
+	err = websocket.JSON.Send(ws, m)
+	if err != nil {
+		panic(err)
+	}
 }

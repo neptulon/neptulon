@@ -7,27 +7,20 @@ import (
 	"github.com/neptulon/cmap"
 )
 
-/*
- * Context object definitions for Request, Response, and Notification middleware.
- */
-
-// ReqCtx encapsulates connection, request, and reponse objects.
-type ReqCtx struct {
+// Ctx is the message context.
+type Ctx struct {
 	Res interface{} // Response to be returned.
 	Err *ResError   // Error to be returned.
 
-	id     string          // message ID
-	method string          // called method
-	params json.RawMessage // request parameters
-
-	mw      []func(ctx *ReqCtx) error
+	m       *Message
+	mw      []func(ctx *Ctx) error
 	mwIndex int
 	session *cmap.CMap
 }
 
-func newReqCtx(id, method string, params json.RawMessage, mw []func(ctx *ReqCtx) error, session *cmap.CMap) *ReqCtx {
+func newCtx(m *Message, mw []func(ctx *Ctx) error, session *cmap.CMap) *Ctx {
 	// append the last middleware to stack, which will write the response to connection, if any
-	mw = append(mw, func(ctx *ReqCtx) error {
+	mw = append(mw, func(ctx *Ctx) error {
 		if ctx.Res != nil || ctx.Err != nil {
 			// return ctx.Client.SendResponse(ctx.id, ctx.Res, ctx.Err)
 		}
@@ -35,19 +28,19 @@ func newReqCtx(id, method string, params json.RawMessage, mw []func(ctx *ReqCtx)
 		return nil
 	})
 
-	return &ReqCtx{id: id, method: method, params: params, mw: mw}
+	return &Ctx{m: m, mw: mw, session: session}
 }
 
 // Session is a data store for storing arbitrary data within this context to communicate with other middleware handling this message.
-func (ctx *ReqCtx) Session() *cmap.CMap {
+func (ctx *Ctx) Session() *cmap.CMap {
 	return ctx.session
 }
 
 // Params reads request parameters into given object.
 // Object should be passed by reference.
-func (ctx *ReqCtx) Params(v interface{}) error {
-	if ctx.params != nil {
-		if err := json.Unmarshal(ctx.params, v); err != nil {
+func (ctx *Ctx) Params(v interface{}) error {
+	if ctx.m.Params != nil {
+		if err := json.Unmarshal(ctx.m.Params, v); err != nil {
 			return fmt.Errorf("cannot deserialize request params: %v", err)
 		}
 	}
@@ -56,30 +49,11 @@ func (ctx *ReqCtx) Params(v interface{}) error {
 }
 
 // Next executes the next middleware in the middleware stack.
-func (ctx *ReqCtx) Next() error {
+func (ctx *Ctx) Next() error {
 	ctx.mwIndex++
 
 	if ctx.mwIndex <= len(ctx.mw) {
 		return ctx.mw[ctx.mwIndex-1](ctx)
-	}
-
-	return nil
-}
-
-// ResCtx encapsulates connection and response objects.
-type ResCtx struct {
-	id     string          // message ID
-	result json.RawMessage // result parameters
-	err    *ResError       // response error (if any)
-}
-
-// Result reads response result data into given object.
-// Object should be passed by reference.
-func (ctx *ResCtx) Result(v interface{}) error {
-	if ctx.result != nil {
-		if err := json.Unmarshal(ctx.result, v); err != nil {
-			return fmt.Errorf("cannot deserialize response result: %v", err)
-		}
 	}
 
 	return nil
