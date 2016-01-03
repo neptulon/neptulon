@@ -11,7 +11,7 @@ import (
 )
 
 func TestEcho(t *testing.T) {
-	s := neptulon.NewServer(":3010")
+	s := neptulon.NewServer("127.0.0.1:3010")
 	go s.Start()
 	time.Sleep(time.Millisecond)
 
@@ -23,8 +23,8 @@ func TestEcho(t *testing.T) {
 	})
 
 	wg.Add(1)
-	origin := "http://localhost/"
-	url := "ws://localhost:3010/"
+	origin := "http://127.0.0.1"
+	url := "ws://127.0.0.1:3010"
 	ws, err := websocket.Dial(url, "", origin)
 	if err != nil {
 		t.Fatal(err)
