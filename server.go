@@ -19,13 +19,21 @@ type Server struct {
 
 // NewServer creates a new Neptulon server.
 func NewServer(addr string) *Server {
-	return &Server{addr: addr}
+	return &Server{
+		addr:  addr,
+		conns: cmap.New(),
+	}
+}
+
+// Middleware registers middleware to handle incoming request messages.
+func (s *Server) Middleware(middleware ...func(ctx *ReqCtx) error) {
+	s.middleware = append(s.middleware, middleware...)
 }
 
 // Start the Neptulon server. This function blocks until server is closed.
 func (s *Server) Start() error {
 	http.Handle("/", websocket.Handler(s.connHandler))
-	return http.ListenAndServe(":12345", nil)
+	return http.ListenAndServe(s.addr, nil)
 }
 
 func (s *Server) connHandler(ws *websocket.Conn) {

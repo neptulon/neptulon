@@ -33,6 +33,7 @@ func NewConn(ws *websocket.Conn, middleware []func(ctx *ReqCtx) error) (*Conn, e
 		middleware: middleware,
 		resRoutes:  cmap.New(),
 		ws:         ws,
+		deadline:   time.Second * time.Duration(300),
 	}, nil
 }
 
@@ -66,6 +67,8 @@ func (c *Conn) StartReceive() {
 				log.Println("Error while handling request:", err)
 				break
 			}
+
+			continue
 		}
 
 		// if the message is a response
