@@ -7,14 +7,15 @@ import (
 	"github.com/neptulon/cmap"
 )
 
-// ReqCtx encapsulates connection, request, and reponse objects.
+// ReqCtx is the request context.
 type ReqCtx struct {
-	ID      string      // Message ID.
-	Method  string      // Called method.
-	Conn    *Conn       // Client connection.
-	Session *cmap.CMap  // Session is a data store for storing arbitrary data within this context to communicate with other middleware handling this message.
-	Res     interface{} // Response to be returned.
-	Err     *ResError   // Error to be returned.
+	Conn    *Conn      // Client connection.
+	Session *cmap.CMap // Session is a data store for storing arbitrary data within this context to communicate with other middleware handling this message.
+
+	ID     string      // Message ID.
+	Method string      // Called method.
+	Res    interface{} // Response to be returned.
+	Err    *ResError   // Error to be returned.
 
 	params  json.RawMessage // request parameters
 	mw      []func(ctx *ReqCtx) error
@@ -23,10 +24,10 @@ type ReqCtx struct {
 
 func newReqCtx(conn *Conn, id, method string, params json.RawMessage, mw []func(ctx *ReqCtx) error) *ReqCtx {
 	return &ReqCtx{
-		ID:      id,
-		Method:  method,
 		Conn:    conn,
 		Session: cmap.New(),
+		ID:      id,
+		Method:  method,
 		params:  params,
 		mw:      mw,
 	}
@@ -55,19 +56,20 @@ func (ctx *ReqCtx) Next() error {
 	return nil
 }
 
-// ResCtx encapsulates connection and response objects.
+// ResCtx is the response context.
 type ResCtx struct {
-	ID   string // Message ID.
-	Conn *Conn  // Client connection.
+	Conn *Conn // Client connection.
+
+	ID string // Message ID.
 
 	result json.RawMessage // result parameters
 	err    *ResError       // response error (if any)
 }
 
-func newResCtx(id string, conn *Conn, result json.RawMessage) *ResCtx {
+func newResCtx(conn *Conn, id string, result json.RawMessage, err *ResError) *ResCtx {
 	return &ResCtx{
-		ID:     id,
 		Conn:   conn,
+		ID:     id,
 		result: result,
 	}
 }

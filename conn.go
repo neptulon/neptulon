@@ -71,7 +71,7 @@ func (c *Conn) StartReceive() {
 		// if the message is a response
 		// append the last middleware to response stack, which will read the response for a previous request, if any
 		if resHandler, ok := c.resRoutes.GetOk(m.ID); ok {
-			err := resHandler.(func(res *Response) error)(&Response{ID: m.ID, Result: m.Result, Error: m.Error})
+			err := resHandler.(func(ctx *ResCtx) error)(newResCtx(c, m.ID, m.Result, m.Error))
 			c.resRoutes.Delete(m.ID)
 			if err != nil {
 				log.Println("Error while handling response:", err)
