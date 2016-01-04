@@ -20,7 +20,7 @@ import (
 // Server is a Neptulon server.
 type Server struct {
 	addr       string
-	conns      *cmap.CMap // conn ID -> Conn
+	conns      *cmap.CMap // conn ID -> *Conn
 	middleware []func(ctx *ReqCtx) error
 	listener   net.Listener
 	wsConfig   websocket.Config
@@ -105,6 +105,22 @@ func (s *Server) wsHandler(ws *websocket.Conn) {
 	c.StartReceive()
 	s.conns.Delete(c.ID)
 	log.Println("Connection closed:", ws.RemoteAddr())
+}
+
+// SendRequest sends a JSON-RPC request through the connection denoted by the connection ID with an auto generated request ID.
+// resHandler is called when a response is returned.
+func (s *Server) SendRequest(connID string, method string, params interface{}, resHandler func(ctx *ResCtx) error) (reqID string, err error) {
+	if conn, ok := s.conns.GetOk(connID); ok {
+		return conn.(*Conn).SendRequest(method, params, resHandler)
+	}
+
+	return "", fmt.Errorf("connection with requested ID: %v does not exist", connID)
+}
+
+// SendRequestArr sends a JSON-RPC request through the connection denoted by the connection ID, with array params and auto generated request ID.
+// resHandler is called when a response is returned.
+func (s *Server) SendRequestArr(connID string, method string, resHandler func(ctx *ResCtx) error, params ...interface{}) (reqID string, err error) {
+	return s.SendRequest(connID, method, params, resHandler)
 }
 
 // Close closes the network listener and the active connections.

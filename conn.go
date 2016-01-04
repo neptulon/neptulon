@@ -93,7 +93,7 @@ func (c *Conn) StartReceive() {
 
 // SendRequest sends a JSON-RPC request through the connection with an auto generated request ID.
 // resHandler is called when a response is returned.
-func (c *Conn) SendRequest(method string, params interface{}, resHandler func(res *Response) error) (reqID string, err error) {
+func (c *Conn) SendRequest(method string, params interface{}, resHandler func(res *ResCtx) error) (reqID string, err error) {
 	id, err := shortid.UUID()
 	if err != nil {
 		return "", err
@@ -110,7 +110,7 @@ func (c *Conn) SendRequest(method string, params interface{}, resHandler func(re
 
 // SendRequestArr sends a JSON-RPC request through the connection, with array params and auto generated request ID.
 // resHandler is called when a response is returned.
-func (c *Conn) SendRequestArr(method string, resHandler func(res *Response) error, params ...interface{}) (reqID string, err error) {
+func (c *Conn) SendRequestArr(method string, resHandler func(res *ResCtx) error, params ...interface{}) (reqID string, err error) {
 	return c.SendRequest(method, params, resHandler)
 }
 
