@@ -35,7 +35,7 @@ func NewServer(addr string) *Server {
 	}
 }
 
-// UseTLS enables Transport Layer Security for the connection.
+// UseTLS enables Transport Layer Security for the connections.
 // cert, key = Server certificate/private key pair.
 // clientCACert = Optional certificate for verifying client certificates.
 // All certificates/private keys are in PEM encoded X.509 format.
