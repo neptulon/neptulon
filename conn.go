@@ -42,6 +42,11 @@ func (c *Conn) SetDeadline(seconds int) {
 	c.deadline = time.Second * time.Duration(seconds)
 }
 
+// Middleware registers middleware to handle incoming request messages.
+func (c *Conn) Middleware(middleware ...func(ctx *ReqCtx) error) {
+	c.middleware = append(c.middleware, middleware...)
+}
+
 // StartReceive starts receiving messages. This method blocks and does not return until the connection is closed.
 func (c *Conn) StartReceive() {
 	// append the last middleware to request stack, which will write the response to connection, if any
