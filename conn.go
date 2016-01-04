@@ -109,6 +109,11 @@ func (c *Conn) SendRequestArr(method string, resHandler func(res *Response) erro
 	return c.SendRequest(method, params, resHandler)
 }
 
+// Close closes a connection.
+func (c *Conn) Close() error {
+	return c.ws.Close()
+}
+
 // SendResponse sends a JSON-RPC response message through the connection.
 func (c *Conn) sendResponse(id string, result interface{}, err *ResError) error {
 	return c.send(Response{ID: id, Result: result, Error: err})
