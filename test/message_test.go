@@ -41,4 +41,10 @@ func TestEcho(t *testing.T) {
 	t.Log("Got response:", res)
 
 	wg.Wait()
+
+	// todo: close listener and connections and neptulon server
+}
+
+func TestTLS(t *testing.T) {
+	// todo: client cert etc.
 }
