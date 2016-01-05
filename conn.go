@@ -45,12 +45,6 @@ func (c *Conn) Middleware(middleware ...func(ctx *ReqCtx) error) {
 	c.middleware = append(c.middleware, middleware...)
 }
 
-// UseConn reuses an established websocket.Conn.
-func (c *Conn) useConn(ws *websocket.Conn) {
-	c.ws = ws
-	c.startReceive()
-}
-
 // Connect connects to the given WebSocket server.
 func (c *Conn) Connect(addr string) error {
 	return nil
@@ -105,6 +99,12 @@ func (c *Conn) receive(msg *message) error {
 	}
 
 	return websocket.JSON.Receive(c.ws, &msg)
+}
+
+// UseConn reuses an established websocket.Conn.
+func (c *Conn) useConn(ws *websocket.Conn) {
+	c.ws = ws
+	c.startReceive()
 }
 
 // startReceive starts receiving messages. This method blocks and does not return until the connection is closed.

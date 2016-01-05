@@ -16,7 +16,7 @@ type ConnHelper struct {
 
 	testing    *testing.T
 	serverAddr string
-	msgWG      sync.WaitGroup
+	resWG      sync.WaitGroup // to be able to blocking wait for pending responses
 }
 
 // NewConnHelper creates a new client helper object.
@@ -25,42 +25,33 @@ func NewConnHelper(t *testing.T, addr string) *ConnHelper {
 		t.Skip("Skipping integration test in short testing mode.")
 	}
 
-	ch := &ConnHelper{testing: t, serverAddr: addr}
-	ch.Conn = neptulon.NewConn(&ch.msgWG, nil)
+	conn, err := neptulon.NewConn()
+	if err != nil {
+		t.Fatal("Failed to create connection:", err)
+	}
+
+	ch := &ConnHelper{Conn: conn, testing: t, serverAddr: addr}
 	ch.Conn.SetDeadline(10)
 	return ch
 }
 
-// MiddlewareIn registers middleware to handle incoming messagesh.
-func (ch *ConnHelper) MiddlewareIn(middleware ...func(ctx *neptulon.Ctx) error) *ConnHelper {
-	ch.Conn.MiddlewareIn(middleware...)
-	return ch
-}
-
-// MiddlewareOut registers middleware to handle/intercept outgoing messages before they are sent.
-func (ch *ConnHelper) MiddlewareOut(middleware ...func(ctx *neptulon.Ctx) error) *ConnHelper {
-	ch.Conn.MiddlewareOut(middleware...)
-	return ch
-}
-
-// UseTLS connects to server using TLS.
-func (ch *ConnHelper) UseTLS(serverCA, clientCert, clientCertKey []byte) *ConnHelper {
-	ch.Conn.UseTLS(serverCA, clientCert, clientCertKey)
-	return ch
+// Middleware registers middleware to handle incoming request messages.
+func (ch *ConnHelper) Middleware(middleware ...func(ctx *neptulon.ReqCtx) error) {
+	ch.Conn.Middleware(middleware...)
 }
 
 // Connect connects to a server.
 func (ch *ConnHelper) Connect() *ConnHelper {
 	// retry connect in case we're operating on a very slow machine
 	for i := 0; i <= 5; i++ {
-		if err := ch.Conn.Connect(ch.addr, false); err != nil {
+		if err := ch.Conn.Connect(ch.serverAddr); err != nil {
 			if operr, ok := err.(*net.OpError); ok && operr.Op == "dial" && operr.Err.Error() == "connection refused" {
 				time.Sleep(time.Millisecond * 50)
 				continue
 			} else if i == 5 {
-				ch.testing.Fatalf("Cannot connect to server address %v after 5 retries, with error: %v", ch.addr, err)
+				ch.testing.Fatalf("Cannot connect to server address %v after 5 retries, with error: %v", ch.serverAddr, err)
 			}
-			ch.testing.Fatalf("Cannot connect to server address %v with error: %v", ch.addr, err)
+			ch.testing.Fatalf("Cannot connect to server address %v with error: %v", ch.serverAddr, err)
 		}
 
 		if i != 0 {
@@ -73,18 +64,21 @@ func (ch *ConnHelper) Connect() *ConnHelper {
 	return ch
 }
 
-// Send sends a message to connected peer.
-func (ch *ConnHelper) Send(msg []byte) {
-	if err := ch.Conn.Send(msg); err != nil {
-		ch.testing.Fatal("Error while sending message to peer:", err)
+// SendRequest sends a JSON-RPC request through the client connection with an auto generated request ID.
+// resHandler is called when a response is returned.
+func (ch *ConnHelper) SendRequest(method string, params interface{}, resHandler func(ctx *neptulon.ResCtx) error) *ConnHelper {
+	ch.resWG.Add(1)
+	_, err := ch.Conn.SendRequest(method, params, func(ctx *neptulon.ResCtx) error {
+		defer ch.resWG.Done()
+		return resHandler(ctx)
+	})
+
+	if err != nil {
+		ch.testing.Fatal("Failed to send request:", err)
 	}
 
-	n := len(msg)
-	if n < 100 {
-		ch.testing.Logf("Sent message to listener from client: %v (%v bytes)", string(msg), n)
-	} else {
-		ch.testing.Logf("Sent message to listener from client: (...messages longer than 100 characters not shown...) (%v bytes)", n)
-	}
+	ch.resWG.Wait()
+	return ch
 }
 
 // Close closes a connection.
@@ -93,5 +87,5 @@ func (ch *ConnHelper) Close() {
 		ch.testing.Fatal("Failed to close connection:", err)
 	}
 
-	ch.msgWG.Wait()
+	ch.resWG.Wait()
 }
