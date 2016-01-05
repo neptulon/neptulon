@@ -49,6 +49,8 @@ func (c *Conn) Middleware(middleware ...func(ctx *ReqCtx) error) {
 func (c *Conn) Connect(addr string) error {
 	ws, err := websocket.Dial(addr, "", "http://localhost")
 	c.ws = ws
+	go c.startReceive()
+	time.Sleep(time.Millisecond) // give receive goroutine a few cycles to start
 	return err
 }
 
