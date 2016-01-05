@@ -47,7 +47,9 @@ func (c *Conn) Middleware(middleware ...func(ctx *ReqCtx) error) {
 
 // Connect connects to the given WebSocket server.
 func (c *Conn) Connect(addr string) error {
-	return nil
+	ws, err := websocket.Dial(addr, "", "http://localhost")
+	c.ws = ws
+	return err
 }
 
 // SendRequest sends a JSON-RPC request through the connection with an auto generated request ID.

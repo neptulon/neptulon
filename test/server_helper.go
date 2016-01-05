@@ -86,9 +86,9 @@ func (sh *ServerHelper) Start() *ServerHelper {
 }
 
 // GetConnHelper creates a client connection to this server instance and returns the connection wrapped in a ClientHelper.
-// func (sh *ServerHelper) GetConnHelper() *ClientHelper {
-// 	return NewClientHelper(sh.testing, sh.Address)
-// }
+func (sh *ServerHelper) GetConnHelper() *ConnHelper {
+	return NewConnHelper(sh.testing, "ws://"+sh.Address)
+}
 
 // Close stops the server listener and connections.
 func (sh *ServerHelper) Close() {
