@@ -14,13 +14,13 @@ import (
 
 // Conn is a client connection.
 type Conn struct {
-	ID            string
-	Session       *cmap.CMap
-	middleware    []func(ctx *ReqCtx) error
-	resRoutes     *cmap.CMap // message ID (string) -> handler func(ctx *ResCtx) error : expected responses for requests that we've sent
-	ws            *websocket.Conn
-	deadline      time.Duration
-	closed, debug bool
+	ID         string
+	Session    *cmap.CMap
+	middleware []func(ctx *ReqCtx) error
+	resRoutes  *cmap.CMap // message ID (string) -> handler func(ctx *ResCtx) error : expected responses for requests that we've sent
+	ws         *websocket.Conn
+	deadline   time.Duration
+	closed     bool
 }
 
 // NewConn creates a new Conn object.
@@ -84,11 +84,6 @@ func (c *Conn) SendRequest(method string, params interface{}, resHandler func(re
 // resHandler is called when a response is returned.
 func (c *Conn) SendRequestArr(method string, resHandler func(res *ResCtx) error, params ...interface{}) (reqID string, err error) {
 	return c.SendRequest(method, params, resHandler)
-}
-
-// IsClientConn indicates that this is a client connection and not a connection received by the server.
-func (c *Conn) IsClientConn() bool {
-	return c.ws.IsClientConn()
 }
 
 // Close closes a connection.

@@ -19,13 +19,13 @@ import (
 
 // Server is a Neptulon server.
 type Server struct {
-	addr          string
-	conns         *cmap.CMap // conn ID -> *Conn
-	middleware    []func(ctx *ReqCtx) error
-	listener      net.Listener
-	wsConfig      websocket.Config
-	wg            sync.WaitGroup
-	closed, debug bool
+	addr       string
+	conns      *cmap.CMap // conn ID -> *Conn
+	middleware []func(ctx *ReqCtx) error
+	listener   net.Listener
+	wsConfig   websocket.Config
+	wg         sync.WaitGroup
+	closed     bool
 }
 
 // NewServer creates a new Neptulon server.
