@@ -86,6 +86,11 @@ func (c *Conn) SendRequestArr(method string, resHandler func(res *ResCtx) error,
 	return c.SendRequest(method, params, resHandler)
 }
 
+// IsClientConn indicates that this is a client connection and not a connection received by the server.
+func (c *Conn) IsClientConn() bool {
+	return c.ws.IsClientConn()
+}
+
 // Close closes a connection.
 func (c *Conn) Close() error {
 	c.closed = true
