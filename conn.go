@@ -20,20 +20,18 @@ type Conn struct {
 	deadline   time.Duration
 }
 
-// NewConn creates a new Neptulon connection wrapping given websocket.Conn.
-func newConn(ws *websocket.Conn, middleware []func(ctx *ReqCtx) error) (*Conn, error) {
+// NewConn creates a new Conn object.
+func NewConn() (*Conn, error) {
 	id, err := shortid.UUID()
 	if err != nil {
 		return nil, err
 	}
 
 	return &Conn{
-		ID:         id,
-		Session:    cmap.New(),
-		middleware: middleware,
-		resRoutes:  cmap.New(),
-		ws:         ws,
-		deadline:   time.Second * time.Duration(300),
+		ID:        id,
+		Session:   cmap.New(),
+		resRoutes: cmap.New(),
+		deadline:  time.Second * time.Duration(300),
 	}, nil
 }
 
@@ -47,48 +45,15 @@ func (c *Conn) Middleware(middleware ...func(ctx *ReqCtx) error) {
 	c.middleware = append(c.middleware, middleware...)
 }
 
-// StartReceive starts receiving messages. This method blocks and does not return until the connection is closed.
-func (c *Conn) StartReceive() {
-	// append the last middleware to request stack, which will write the response to connection, if any
-	c.middleware = append(c.middleware, func(ctx *ReqCtx) error {
-		if ctx.Res != nil || ctx.Err != nil {
-			return ctx.Conn.sendResponse(ctx.ID, ctx.Res, ctx.Err)
-		}
+// UseConn reuses an established websocket.Conn.
+func (c *Conn) useConn(ws *websocket.Conn) {
+	c.ws = ws
+	c.startReceive()
+}
 
-		return nil
-	})
-
-	for {
-		var m message
-		err := c.receive(&m)
-		if err != nil {
-			log.Println("Error while receiving message:", err)
-			break
-		}
-
-		// if the message is a request
-		if m.Method != "" {
-			if err := newReqCtx(c, m.ID, m.Method, m.Params, c.middleware).Next(); err != nil {
-				log.Println("Error while handling request:", err)
-				break
-			}
-
-			continue
-		}
-
-		// if the message is a response
-		if resHandler, ok := c.resRoutes.GetOk(m.ID); ok {
-			err := resHandler.(func(ctx *ResCtx) error)(newResCtx(c, m.ID, m.Result, m.Error))
-			c.resRoutes.Delete(m.ID)
-			if err != nil {
-				log.Println("Error while handling response:", err)
-				break
-			}
-		} else {
-			log.Println("Error while handling response: got response to a request with unknown ID:", m.ID)
-			break
-		}
-	}
+// Connect connects to the given WebSocket server.
+func (c *Conn) Connect(addr string) error {
+	return nil
 }
 
 // SendRequest sends a JSON-RPC request through the connection with an auto generated request ID.
@@ -140,4 +105,48 @@ func (c *Conn) receive(msg *message) error {
 	}
 
 	return websocket.JSON.Receive(c.ws, &msg)
+}
+
+// startReceive starts receiving messages. This method blocks and does not return until the connection is closed.
+func (c *Conn) startReceive() {
+	// append the last middleware to request stack, which will write the response to connection, if any
+	c.middleware = append(c.middleware, func(ctx *ReqCtx) error {
+		if ctx.Res != nil || ctx.Err != nil {
+			return ctx.Conn.sendResponse(ctx.ID, ctx.Res, ctx.Err)
+		}
+
+		return nil
+	})
+
+	for {
+		var m message
+		err := c.receive(&m)
+		if err != nil {
+			log.Println("Error while receiving message:", err)
+			break
+		}
+
+		// if the message is a request
+		if m.Method != "" {
+			if err := newReqCtx(c, m.ID, m.Method, m.Params, c.middleware).Next(); err != nil {
+				log.Println("Error while handling request:", err)
+				break
+			}
+
+			continue
+		}
+
+		// if the message is a response
+		if resHandler, ok := c.resRoutes.GetOk(m.ID); ok {
+			err := resHandler.(func(ctx *ResCtx) error)(newResCtx(c, m.ID, m.Result, m.Error))
+			c.resRoutes.Delete(m.ID)
+			if err != nil {
+				log.Println("Error while handling response:", err)
+				break
+			}
+		} else {
+			log.Println("Error while handling response: got response to a request with unknown ID:", m.ID)
+			break
+		}
+	}
 }

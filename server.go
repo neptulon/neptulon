@@ -95,14 +95,15 @@ func (s *Server) Start() error {
 func (s *Server) wsHandler(ws *websocket.Conn) {
 	defer s.wg.Done()
 	log.Println("Client connected:", ws.RemoteAddr())
-	c, err := newConn(ws, s.middleware)
+	c, err := NewConn()
 	if err != nil {
 		log.Println("Error while accepting connection:", err)
 		return
 	}
+	c.Middleware(s.middleware...)
 
 	s.conns.Set(c.ID, c)
-	c.StartReceive()
+	c.useConn(ws)
 	s.conns.Delete(c.ID)
 	log.Println("Connection closed:", ws.RemoteAddr())
 }
