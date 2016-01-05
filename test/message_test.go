@@ -7,9 +7,17 @@ import (
 
 	"golang.org/x/net/websocket"
 
-	"github.com/neptulon/jsonrpc"
-	"github.com/neptulon/jsonrpc/middleware"
 	"github.com/neptulon/neptulon"
+	"github.com/neptulon/neptulon/middleware"
+	"github.com/neptulon/randstr"
+)
+
+var (
+	msg1 = "Lorem ipsum dolor sit amet, consectetur adipiscing elit."
+	msg2 = "In sit amet lectus felis, at pellentesque turpis."
+	msg3 = "Nunc urna enim, cursus varius aliquet ac, imperdiet eget tellus."
+	msg4 = randstr.Get(45 * 1000)       // 0.45 MB
+	msg5 = randstr.Get(5 * 1000 * 1000) // 5.0 MB
 )
 
 type echoMsg struct {
@@ -20,13 +28,14 @@ func TestEcho(t *testing.T) {
 	sh := NewServerHelper(t).Start()
 	defer sh.Close()
 
-	rout := sh.GetRouter()
+	rout := middleware.NewRouter()
+	sh.Middleware(rout.Middleware)
 	rout.Request("echo", middleware.Echo)
 
 	ch := sh.GetClientHelper().Connect()
 	defer ch.Close()
 
-	ch.SendRequest("echo", echoMsg{Message: "Hello!"}, func(ctx *jsonrpc.ResCtx) error {
+	ch.SendRequest("echo", echoMsg{Message: "Hello!"}, func(ctx *neptulon.ResCtx) error {
 		var msg echoMsg
 		if err := ctx.Result(&msg); err != nil {
 			t.Fatal(err)
