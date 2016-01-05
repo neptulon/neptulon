@@ -1,7 +1,9 @@
 package neptulon
 
 import (
+	"io"
 	"log"
+	"net"
 	"time"
 
 	"github.com/neptulon/cmap"
@@ -12,12 +14,13 @@ import (
 
 // Conn is a client connection.
 type Conn struct {
-	ID         string
-	Session    *cmap.CMap
-	middleware []func(ctx *ReqCtx) error
-	resRoutes  *cmap.CMap // message ID (string) -> handler func(ctx *ResCtx) error : expected responses for requests that we've sent
-	ws         *websocket.Conn
-	deadline   time.Duration
+	ID            string
+	Session       *cmap.CMap
+	middleware    []func(ctx *ReqCtx) error
+	resRoutes     *cmap.CMap // message ID (string) -> handler func(ctx *ResCtx) error : expected responses for requests that we've sent
+	ws            *websocket.Conn
+	deadline      time.Duration
+	closed, debug bool
 }
 
 // NewConn creates a new Conn object.
@@ -36,6 +39,7 @@ func NewConn() (*Conn, error) {
 }
 
 // SetDeadline set the read/write deadlines for the connection, in seconds.
+// Default value for read/write deadline is 300 seconds.
 func (c *Conn) SetDeadline(seconds int) {
 	c.deadline = time.Second * time.Duration(seconds)
 }
@@ -52,6 +56,11 @@ func (c *Conn) Connect(addr string) error {
 	go c.startReceive()
 	time.Sleep(time.Millisecond) // give receive goroutine a few cycles to start
 	return err
+}
+
+// RemoteAddr returns the remote network address.
+func (c *Conn) RemoteAddr() net.Addr {
+	return c.ws.RemoteAddr()
 }
 
 // SendRequest sends a JSON-RPC request through the connection with an auto generated request ID.
@@ -79,6 +88,7 @@ func (c *Conn) SendRequestArr(method string, resHandler func(res *ResCtx) error,
 
 // Close closes a connection.
 func (c *Conn) Close() error {
+	c.closed = true
 	return c.ws.Close()
 }
 
@@ -126,6 +136,18 @@ func (c *Conn) startReceive() {
 		var m message
 		err := c.receive(&m)
 		if err != nil {
+			// if we closed the connection
+			if c.closed {
+				log.Printf("Connection closed. Conn ID: %v, Remote Addr: %v\n", c.ID, c.RemoteAddr())
+				break
+			}
+
+			// if peer closed the connection
+			if err == io.EOF {
+				log.Printf("Peer disconnected. Conn ID: %v, Remote Addr: %v\n", c.ID, c.RemoteAddr())
+				break
+			}
+
 			log.Println("Error while receiving message:", err)
 			break
 		}

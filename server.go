@@ -19,12 +19,13 @@ import (
 
 // Server is a Neptulon server.
 type Server struct {
-	addr       string
-	conns      *cmap.CMap // conn ID -> *Conn
-	middleware []func(ctx *ReqCtx) error
-	listener   net.Listener
-	wsConfig   websocket.Config
-	wg         sync.WaitGroup
+	addr          string
+	conns         *cmap.CMap // conn ID -> *Conn
+	middleware    []func(ctx *ReqCtx) error
+	listener      net.Listener
+	wsConfig      websocket.Config
+	wg            sync.WaitGroup
+	closed, debug bool
 }
 
 // NewServer creates a new Neptulon server.
@@ -88,24 +89,12 @@ func (s *Server) Start() error {
 	}
 	s.listener = l
 
-	log.Println("Neptulon server started at address:", s.addr)
-	return http.Serve(l, nil)
-}
-
-func (s *Server) wsHandler(ws *websocket.Conn) {
-	defer s.wg.Done()
-	log.Println("Client connected:", ws.RemoteAddr())
-	c, err := NewConn()
-	if err != nil {
-		log.Println("Error while accepting connection:", err)
-		return
+	log.Println("Server started:", s.addr)
+	err = http.Serve(l, nil)
+	if s.closed {
+		return nil
 	}
-	c.Middleware(s.middleware...)
-
-	s.conns.Set(c.ID, c)
-	c.useConn(ws)
-	s.conns.Delete(c.ID)
-	log.Println("Connection closed:", ws.RemoteAddr())
+	return err
 }
 
 // SendRequest sends a JSON-RPC request through the connection denoted by the connection ID with an auto generated request ID.
@@ -126,6 +115,7 @@ func (s *Server) SendRequestArr(connID string, method string, resHandler func(ct
 
 // Close closes the network listener and the active connections.
 func (s *Server) Close() error {
+	s.closed = true
 	err := s.listener.Close()
 
 	// close all active connections discarding any read/writes that is going on currently
@@ -138,5 +128,22 @@ func (s *Server) Close() error {
 	}
 
 	s.wg.Wait()
+	log.Println("Server stopped:", s.addr)
 	return nil
+}
+
+// wsHandler handles incoming websocket connections.
+func (s *Server) wsHandler(ws *websocket.Conn) {
+	defer s.wg.Done()
+	c, err := NewConn()
+	if err != nil {
+		log.Println("Error while accepting connection:", err)
+		return
+	}
+	c.Middleware(s.middleware...)
+	log.Printf("Client connected: Conn ID: %v, Remote Addr: %v\n", c.ID, ws.RemoteAddr())
+
+	s.conns.Set(c.ID, c)
+	c.useConn(ws)
+	s.conns.Delete(c.ID)
 }
