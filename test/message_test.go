@@ -7,8 +7,36 @@ import (
 
 	"golang.org/x/net/websocket"
 
+	"github.com/neptulon/jsonrpc"
+	"github.com/neptulon/jsonrpc/middleware"
 	"github.com/neptulon/neptulon"
 )
+
+type echoMsg struct {
+	Message string `json:"message"`
+}
+
+func TestEcho(t *testing.T) {
+	sh := NewServerHelper(t).Start()
+	defer sh.Close()
+
+	rout := sh.GetRouter()
+	rout.Request("echo", middleware.Echo)
+
+	ch := sh.GetClientHelper().Connect()
+	defer ch.Close()
+
+	ch.SendRequest("echo", echoMsg{Message: "Hello!"}, func(ctx *jsonrpc.ResCtx) error {
+		var msg echoMsg
+		if err := ctx.Result(&msg); err != nil {
+			t.Fatal(err)
+		}
+		if msg.Message != "Hello!" {
+			t.Fatalf("expected: %v got: %v", "Hello!", msg.Message)
+		}
+		return ctx.Next()
+	})
+}
 
 func TestEcho(t *testing.T) {
 	s := neptulon.NewServer("127.0.0.1:3010")
