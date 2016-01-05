@@ -73,7 +73,8 @@ func (s *Server) Middleware(middleware ...func(ctx *ReqCtx) error) {
 
 // Start the Neptulon server. This function blocks until server is closed.
 func (s *Server) Start() error {
-	http.Handle("/", websocket.Server{
+	mux := http.NewServeMux()
+	mux.Handle("/", websocket.Server{
 		Config:  s.wsConfig,
 		Handler: s.wsHandler,
 		Handshake: func(config *websocket.Config, req *http.Request) error {
@@ -90,7 +91,7 @@ func (s *Server) Start() error {
 	s.listener = l
 
 	log.Println("Server started:", s.addr)
-	err = http.Serve(l, nil)
+	err = http.Serve(l, mux)
 	if s.closed {
 		return nil
 	}

@@ -47,7 +47,7 @@ func TestEcho(t *testing.T) {
 	})
 }
 
-func TestEcho2(t *testing.T) {
+func TestEchoBasic(t *testing.T) { // not using any test helper at all
 	s := neptulon.NewServer("127.0.0.1:3010")
 	go s.Start()
 	defer s.Close()
