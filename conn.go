@@ -136,15 +136,15 @@ func (c *Conn) startReceive() {
 		var m message
 		err := c.receive(&m)
 		if err != nil {
-			// if we closed the connection
-			if c.closed {
-				log.Printf("Connection closed. Conn ID: %v, Remote Addr: %v\n", c.ID, c.RemoteAddr())
-				break
-			}
-
 			// if peer closed the connection
 			if err == io.EOF {
 				log.Printf("Peer disconnected. Conn ID: %v, Remote Addr: %v\n", c.ID, c.RemoteAddr())
+				break
+			}
+
+			// if we closed the connection
+			if c.closed {
+				log.Printf("Connection closed. Conn ID: %v, Remote Addr: %v\n", c.ID, c.RemoteAddr())
 				break
 			}
 
