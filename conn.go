@@ -21,7 +21,7 @@ type Conn struct {
 }
 
 // NewConn creates a new Neptulon connection wrapping given websocket.Conn.
-func NewConn(ws *websocket.Conn, middleware []func(ctx *ReqCtx) error) (*Conn, error) {
+func newConn(ws *websocket.Conn, middleware []func(ctx *ReqCtx) error) (*Conn, error) {
 	id, err := shortid.UUID()
 	if err != nil {
 		return nil, err

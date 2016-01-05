@@ -47,7 +47,6 @@ func NewServerHelper(t *testing.T) *ServerHelper {
 
 // UseTLS enables Transport Layer Security for the connections.
 func (sh *ServerHelper) UseTLS() *ServerHelper {
-
 	// generate TLS certs
 	certChain, err := ca.GenCertChain("FooBar", host, host, time.Hour, 512)
 	if err != nil {

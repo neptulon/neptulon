@@ -76,7 +76,7 @@ func (s *Server) Start() error {
 		Config:  s.wsConfig,
 		Handler: s.wsHandler,
 		Handshake: func(config *websocket.Config, req *http.Request) error {
-			s.wg.Add(1)
+			s.wg.Add(1)                                  // todo: this needs to happen inside the gorotune executing the Start method and not the request goroutine or we'll miss some connections
 			config.Origin, _ = url.Parse(req.RemoteAddr) // we're interested in remote address and not origin header text
 			return nil
 		},
@@ -95,7 +95,7 @@ func (s *Server) Start() error {
 func (s *Server) wsHandler(ws *websocket.Conn) {
 	defer s.wg.Done()
 	log.Println("Client connected:", ws.RemoteAddr())
-	c, err := NewConn(ws, s.middleware)
+	c, err := newConn(ws, s.middleware)
 	if err != nil {
 		log.Println("Error while accepting connection:", err)
 		return
