@@ -1,43 +1,58 @@
 package neptulon_test
 
-import "github.com/neptulon/neptulon"
+import (
+	"fmt"
+	"log"
+	"sync"
+
+	"github.com/neptulon/neptulon"
+)
 
 const debug = false
 
 // Example demonstrating the Neptulon server.
 func Example() {
-	type echoMsg struct {
+	type SampleMsg struct {
 		Message string `json:"message"`
 	}
 
-	s := neptulon.NewServer("127.0.0.1:3010")
-
-	// echo message body back to the client
+	// start the server and echo incoming messages back to the sender
+	s := neptulon.NewServer("127.0.0.1:3000")
 	s.Middleware(func(ctx *neptulon.ReqCtx) error {
-		var msg interface{}
+		var msg SampleMsg
 		if err := ctx.Params(&msg); err != nil {
 			return err
 		}
-
 		ctx.Res = msg
 		return ctx.Next()
 	})
-
 	go s.Start()
 
-	ch := sh.GetConnHelper().Connect()
-	defer ch.Close()
+	// connect to the server and send a message
+	c, err := neptulon.NewConn()
+	if err != nil {
+		log.Fatal(err)
+	}
+	if err := c.Connect("ws://127.0.0.1:3000"); err != nil {
+		log.Fatal(err)
+	}
 
-	ch.SendRequest("echo", echoMsg{Message: "Hello!"}, func(ctx *neptulon.ResCtx) error {
-		var msg echoMsg
+	var wg sync.WaitGroup
+	wg.Add(1)
+	_, err = c.SendRequest("echo", SampleMsg{Message: "Hello!"}, func(ctx *neptulon.ResCtx) error {
+		wg.Done()
+		var msg SampleMsg
 		if err := ctx.Result(&msg); err != nil {
-			t.Fatal(err)
+			return err
 		}
-		if msg.Message != "Hello!" {
-			t.Fatalf("expected: %v got: %v", "Hello!", msg.Message)
-		}
+		fmt.Println("Server says:", msg.Message)
 		return nil
 	})
 
-	// ** Output: Server started
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	wg.Wait()
+	// Output: Server says: Hello!
 }
