@@ -37,7 +37,13 @@ c.SendRequest("echo", map[string]string{"message": "Hello!"}, func(ctx *neptulon
 
 For a more comprehensive example, see [example_test.go](example_test.go) file.
 
-# Client Libraries
+## Middleware
+
+Both the `Server` and client `Conn` types have the same middleware handler signature: `Middleware(func(ctx *ReqCtx) error)`. Since both the server and the client can send request messages to each other, you can use the same set of middleware to for both, to handle the incoming requests.
+
+See [middleware](middleware) package to get a list of all bundled middleware.
+
+## Client Libraries
 
 You can connect to your Neptulon server using any programming language that has WebSocket + JSON libraries. For convenience and for reference, following client modules are provided nonetheless:
 
