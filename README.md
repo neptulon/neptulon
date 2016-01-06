@@ -13,6 +13,7 @@ Following is server for echoing all incoming messages.
 
 ```go
 s := neptulon.NewServer("127.0.0.1:3000")
+
 s.Middleware(func(ctx *neptulon.ReqCtx) error {
   ctx.Params(&ctx.Res)
 	return ctx.Next()
