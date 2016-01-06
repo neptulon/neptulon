@@ -15,7 +15,7 @@ Following is server for echoing all incoming messages.
 s := neptulon.NewServer("127.0.0.1:3000")
 
 s.Middleware(func(ctx *neptulon.ReqCtx) error {
-  ctx.Params(&ctx.Res)
+	ctx.Params(&ctx.Res)
 	return ctx.Next()
 })
 
@@ -29,7 +29,7 @@ c, _ := neptulon.NewConn()
 c.Connect("ws://127.0.0.1:3000")
 c.SendRequest("echo", map[string]string{"message": "Hello!"}, func(ctx *neptulon.ResCtx) error {
 	var msg interface{}
-  ctx.Result(&msg)
+	ctx.Result(&msg)
 	fmt.Println("Server sent:", msg)
 	return nil
 })
