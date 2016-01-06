@@ -27,6 +27,7 @@ func Example() {
 		return ctx.Next()
 	})
 	go s.Start()
+	defer s.Close()
 
 	// connect to the server and send a message
 	c, err := neptulon.NewConn()
@@ -36,6 +37,7 @@ func Example() {
 	if err := c.Connect("ws://127.0.0.1:3000"); err != nil {
 		log.Fatal(err)
 	}
+	defer c.Close()
 
 	var wg sync.WaitGroup
 	wg.Add(1)
