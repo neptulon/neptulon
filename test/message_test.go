@@ -47,7 +47,7 @@ func TestEcho(t *testing.T) {
 	})
 }
 
-func TestEchoBasic(t *testing.T) { // not using any test helper at all
+func TestEchoWithoutTestHelpers(t *testing.T) {
 	s := neptulon.NewServer("127.0.0.1:3010")
 	go s.Start()
 	defer s.Close()
@@ -82,5 +82,24 @@ func TestEchoBasic(t *testing.T) { // not using any test helper at all
 }
 
 func TestTLS(t *testing.T) {
-	// todo: client cert etc.
+	// sh := NewServerHelper(t).UseTLS().Start()
+	// defer sh.Close()
+	//
+	// rout := middleware.NewRouter()
+	// sh.Middleware(rout.Middleware)
+	// rout.Request("echo", middleware.Echo)
+	//
+	// ch := sh.GetConnHelper().UseTLS().Connect()
+	// defer ch.Close()
+	//
+	// ch.SendRequest("echo", echoMsg{Message: "Hello!"}, func(ctx *neptulon.ResCtx) error {
+	// 	var msg echoMsg
+	// 	if err := ctx.Result(&msg); err != nil {
+	// 		t.Fatal(err)
+	// 	}
+	// 	if msg.Message != "Hello!" {
+	// 		t.Fatalf("expected: %v got: %v", "Hello!", msg.Message)
+	// 	}
+	// 	return nil
+	// })
 }
