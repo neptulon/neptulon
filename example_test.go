@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"sync"
+	"time"
 
 	"github.com/neptulon/neptulon"
 )
@@ -27,6 +28,7 @@ func Example() {
 		return ctx.Next()
 	})
 	go s.Start()
+	time.Sleep(time.Second) // let server goroutine to warm up
 	defer s.Close()
 
 	// connect to the server and send a message
