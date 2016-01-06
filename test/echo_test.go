@@ -60,10 +60,10 @@ func TestEchoWithoutTestHelpers(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := websocket.JSON.Send(ws, neptulon.Request{ID: "123", Method: "test"}); err != nil {
+	if err := websocket.JSON.Send(ws, map[string]string{"id": "123", "method": "test"}); err != nil {
 		t.Fatal(err)
 	}
-	var res neptulon.Response
+	var res interface{}
 	if err := websocket.JSON.Receive(ws, &res); err != nil {
 		t.Fatal(err)
 	}

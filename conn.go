@@ -75,7 +75,7 @@ func (c *Conn) SendRequest(method string, params interface{}, resHandler func(re
 		return "", err
 	}
 
-	req := Request{ID: id, Method: method, Params: params}
+	req := request{ID: id, Method: method, Params: params}
 	if err = c.send(req); err != nil {
 		return "", err
 	}
@@ -98,7 +98,7 @@ func (c *Conn) Close() error {
 
 // SendResponse sends a JSON-RPC response message through the connection.
 func (c *Conn) sendResponse(id string, result interface{}, err *ResError) error {
-	return c.send(Response{ID: id, Result: result, Error: err})
+	return c.send(response{ID: id, Result: result, Error: err})
 }
 
 // Send sends the given message through the connection.
