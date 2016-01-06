@@ -26,9 +26,22 @@ Following is a client connection to the above server. You can also use [WebSocke
 ```go
 c, _ := neptulon.NewConn()
 c.Connect("ws://127.0.0.1:3000")
+c.SendRequest("echo", map[string]string{"message": "Hello!"}, func(ctx *neptulon.ResCtx) error {
+	var msg interface{}
+  ctx.Result(&msg)
+	fmt.Println("Server sent:", msg)
+	return nil
+})
 ```
 
 For a more comprehensive example, see [example_test.go](example_test.go) file.
+
+# Client Libraries
+
+You can connect to your Neptulon server using any programming language that has WebSocket + JSON libraries. For convenience and for reference, following client modules are provided nonetheless:
+
+* Go: Bundled [conn.go](conn.go) file.
+* Java: Package [client-java](https://github.com/neptulon/client-java). Uses OkHttp for WebSockets and GSON for JSON serialization.
 
 ## Users
 
