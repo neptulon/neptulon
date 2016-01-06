@@ -1,202 +1,183 @@
 package neptulon
 
 import (
-	"crypto/tls"
-	"crypto/x509"
-	"encoding/binary"
-	"encoding/pem"
-	"errors"
-	"fmt"
+	"io"
 	"log"
 	"net"
 	"time"
+
+	"github.com/neptulon/cmap"
+	"github.com/neptulon/shortid"
+
+	"golang.org/x/net/websocket"
 )
 
-// Conn is a full-duplex bidirectional connection.
-// Default values for header size, maximum message size, and read/write deadlines are
-// 4 bytes, 2^([header size]4*8)-1 = 4294967295 bytes (4GB), and 300 seconds, respectively.
+// Conn is a client connection.
 type Conn struct {
-	Conn net.Conn // Inner connection object.
-
-	tls        bool
-	headerSize int
-	maxMsgSize int
+	ID         string
+	Session    *cmap.CMap
+	middleware []func(ctx *ReqCtx) error
+	resRoutes  *cmap.CMap // message ID (string) -> handler func(ctx *ResCtx) error : expected responses for requests that we've sent
+	ws         *websocket.Conn
 	deadline   time.Duration
-	debug      bool
+	closed     bool
+}
+
+// NewConn creates a new Conn object.
+func NewConn() (*Conn, error) {
+	id, err := shortid.UUID()
+	if err != nil {
+		return nil, err
+	}
+
+	return &Conn{
+		ID:        id,
+		Session:   cmap.New(),
+		resRoutes: cmap.New(),
+		deadline:  time.Second * time.Duration(300),
+	}, nil
 }
 
 // SetDeadline set the read/write deadlines for the connection, in seconds.
+// Default value for read/write deadline is 300 seconds.
 func (c *Conn) SetDeadline(seconds int) {
 	c.deadline = time.Second * time.Duration(seconds)
 }
 
-// Read waits for and reads the next incoming message from the connection.
-func (c *Conn) Read() ([]byte, error) {
-	if err := c.Conn.SetReadDeadline(time.Now().Add(c.deadline)); err != nil {
-		return nil, err
-	}
-
-	// read the content length header
-	h := make([]byte, c.headerSize)
-	n, err := c.Conn.Read(h)
-	if err != nil {
-		return nil, err
-	}
-
-	if n != c.headerSize {
-		return nil, fmt.Errorf("expected to read header size %v bytes but instead read %v bytes", c.headerSize, n)
-	}
-
-	// calculate the content length
-	n = readHeaderBytes(h)
-	if n > c.maxMsgSize {
-		return nil, fmt.Errorf("size of message to be read (%v) is bigger than maxMsgSize (%v)", n, c.maxMsgSize)
-	}
-
-	// read the message content
-	msg := make([]byte, n)
-	total := 0
-	for total < n {
-		// todo: log here in case it gets stuck, or there is a dos attack, pumping up cpu usage!
-		i, err := c.Conn.Read(msg[total:])
-		if err != nil {
-			err = fmt.Errorf("error while reading incoming message: %v", err)
-			break
-		}
-		total += i
-	}
-	if total != n {
-		err = fmt.Errorf("expected to read %v bytes instead read %v bytes", n, total)
-	}
-
-	if c.debug {
-		log.Println("Incoming message:", string(msg))
-	}
-
-	return msg, nil
+// Middleware registers middleware to handle incoming request messages.
+func (c *Conn) Middleware(middleware ...func(ctx *ReqCtx) error) {
+	c.middleware = append(c.middleware, middleware...)
 }
 
-// Write writes given message to the connection.
-func (c *Conn) Write(msg []byte) error {
-	if err := c.Conn.SetWriteDeadline(time.Now().Add(c.deadline)); err != nil {
-		return err
-	}
-
-	l := len(msg)
-	h := makeHeaderBytes(l, c.headerSize)
-
-	// write the header
-	n, err := c.Conn.Write(h)
+// Connect connects to the given WebSocket server.
+func (c *Conn) Connect(addr string) error {
+	ws, err := websocket.Dial(addr, "", "http://localhost")
 	if err != nil {
 		return err
 	}
-	if n != c.headerSize {
-		err = fmt.Errorf("expected to write %v bytes but only wrote %v bytes", l, n)
-	}
 
-	// write the body
-	n, err = c.Conn.Write(msg)
-	if err != nil {
-		return err
-	}
-	if n != l {
-		err = fmt.Errorf("expected to write %v bytes but only wrote %v bytes", l, n)
-	}
-
+	c.ws = ws
+	go c.startReceive()
+	time.Sleep(time.Millisecond) // give receive goroutine a few cycles to start
 	return nil
 }
 
 // RemoteAddr returns the remote network address.
 func (c *Conn) RemoteAddr() net.Addr {
-	return c.Conn.RemoteAddr()
+	return c.ws.RemoteAddr()
 }
 
-// ConnectionState returns basic TLS details about the connection.
-func (c *Conn) ConnectionState() (tls.ConnectionState, error) {
-	if !c.tls {
-		return tls.ConnectionState{}, errors.New("not a TLS connection")
+// SendRequest sends a JSON-RPC request through the connection with an auto generated request ID.
+// resHandler is called when a response is returned.
+func (c *Conn) SendRequest(method string, params interface{}, resHandler func(res *ResCtx) error) (reqID string, err error) {
+	id, err := shortid.UUID()
+	if err != nil {
+		return "", err
 	}
 
-	return c.Conn.(*tls.Conn).ConnectionState(), nil
+	req := Request{ID: id, Method: method, Params: params}
+	if err = c.send(req); err != nil {
+		return "", err
+	}
+
+	c.resRoutes.Set(req.ID, resHandler)
+	return id, nil
+}
+
+// SendRequestArr sends a JSON-RPC request through the connection, with array params and auto generated request ID.
+// resHandler is called when a response is returned.
+func (c *Conn) SendRequestArr(method string, resHandler func(res *ResCtx) error, params ...interface{}) (reqID string, err error) {
+	return c.SendRequest(method, params, resHandler)
 }
 
 // Close closes a connection.
-// Note: TCP/IP stack does not guarantee delivery of messages before the connection is closed.
 func (c *Conn) Close() error {
-	return c.Conn.Close() // todo: if conn.err is nil, send a close req and wait ack then close? (or even wait for everything else to finish?)
+	c.closed = true
+	return c.ws.Close()
 }
 
-// DialTCP creates a new client side TCP connection to a server at the given network address.
-func dialTCP(addr string, debug bool) (*Conn, error) {
-	c, err := net.Dial("tcp", addr)
-	if err != nil {
-		return nil, err
+// SendResponse sends a JSON-RPC response message through the connection.
+func (c *Conn) sendResponse(id string, result interface{}, err *ResError) error {
+	return c.send(Response{ID: id, Result: result, Error: err})
+}
+
+// Send sends the given message through the connection.
+func (c *Conn) send(msg interface{}) error {
+	if err := c.ws.SetWriteDeadline(time.Now().Add(c.deadline)); err != nil {
+		return err
 	}
 
-	return newConn(c, false, debug)
+	return websocket.JSON.Send(c.ws, msg)
 }
 
-// DialTLS creates a new client side TLS connection to a server at the given network address,
-// with optional server CA and/or a client certificate (PEM encoded X.509 cert/key).
-func dialTLS(addr string, ca, clientCert, clientCertKey []byte, debug bool) (*Conn, error) {
-	var cas *x509.CertPool
-	var certs []tls.Certificate
-	if ca != nil {
-		cas = x509.NewCertPool()
-		ok := cas.AppendCertsFromPEM(ca)
-		if !ok {
-			return nil, errors.New("failed to parse the CA certificate")
+// Receive receives message from the connection.
+func (c *Conn) receive(msg *message) error {
+	if err := c.ws.SetReadDeadline(time.Now().Add(c.deadline)); err != nil {
+		return err
+	}
+
+	return websocket.JSON.Receive(c.ws, &msg)
+}
+
+// UseConn reuses an established websocket.Conn.
+// This function blocks and does not return until the connection is closed by another goroutine.
+func (c *Conn) useConn(ws *websocket.Conn) {
+	c.ws = ws
+	c.startReceive()
+}
+
+// startReceive starts receiving messages. This method blocks and does not return until the connection is closed.
+func (c *Conn) startReceive() {
+	// append the last middleware to request stack, which will write the response to connection, if any
+	c.middleware = append(c.middleware, func(ctx *ReqCtx) error {
+		if ctx.Res != nil || ctx.Err != nil {
+			return ctx.Conn.sendResponse(ctx.ID, ctx.Res, ctx.Err)
 		}
-	}
 
-	if clientCert != nil {
-		tlsCert, err := tls.X509KeyPair(clientCert, clientCertKey)
+		return nil
+	})
+
+	for {
+		var m message
+		err := c.receive(&m)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse the client certificate: %v", err)
+			// if peer closed the connection
+			if err == io.EOF {
+				log.Printf("Peer disconnected. Conn ID: %v, Remote Addr: %v\n", c.ID, c.RemoteAddr())
+				break
+			}
+
+			// if we closed the connection
+			if c.closed {
+				log.Printf("Connection closed. Conn ID: %v, Remote Addr: %v\n", c.ID, c.RemoteAddr())
+				break
+			}
+
+			log.Println("Error while receiving message:", err)
+			break
 		}
 
-		c, _ := pem.Decode(clientCert)
-		if tlsCert.Leaf, err = x509.ParseCertificate(c.Bytes); err != nil {
-			return nil, fmt.Errorf("failed to parse the client certificate: %v", err)
+		// if the message is a request
+		if m.Method != "" {
+			if err := newReqCtx(c, m.ID, m.Method, m.Params, c.middleware).Next(); err != nil {
+				log.Println("Error while handling request:", err)
+				break
+			}
+
+			continue
 		}
 
-		certs = []tls.Certificate{tlsCert}
+		// if the message is a response
+		if resHandler, ok := c.resRoutes.GetOk(m.ID); ok {
+			err := resHandler.(func(ctx *ResCtx) error)(newResCtx(c, m.ID, m.Result, m.Error))
+			c.resRoutes.Delete(m.ID)
+			if err != nil {
+				log.Println("Error while handling response:", err)
+				break
+			}
+		} else {
+			log.Println("Error while handling response: got response to a request with unknown ID:", m.ID)
+			break
+		}
 	}
-
-	c, err := tls.Dial("tcp", addr, &tls.Config{RootCAs: cas, Certificates: certs})
-	if err != nil {
-		return nil, err
-	}
-
-	return newConn(c, true, debug)
-}
-
-func newConn(conn net.Conn, tls, debug bool) (*Conn, error) {
-	if conn == nil {
-		return nil, errors.New("connection object cannot be nil")
-	}
-
-	return &Conn{
-		Conn:       conn,
-		tls:        tls,
-		headerSize: 4,
-		maxMsgSize: 4294967295,
-		deadline:   time.Second * time.Duration(300),
-		debug:      debug,
-	}, nil
-}
-
-// makeHeaderBytes takes the size of a message in bytes and puts it into a header block in little endian encoding.
-// i.e. message size 4294967295 bytes and 4 byte header block will generate header: [255 255 255 255]
-// l = message size in bytes
-// h = header size in bytes
-func makeHeaderBytes(m, h int) []byte {
-	b := make([]byte, h)
-	binary.LittleEndian.PutUint32(b, uint32(m))
-	return b
-}
-
-// readHeaderBytes does reverse of what makeHeaderBytes does and reads the message size out of the given header block.
-func readHeaderBytes(h []byte) int {
-	return int(binary.LittleEndian.Uint32(h))
 }

@@ -1,7 +1,6 @@
 package test
 
 import (
-	"crypto/x509/pkix"
 	"sync"
 	"testing"
 	"time"
@@ -23,7 +22,7 @@ type ServerHelper struct {
 	// PEM encoded X.509 certificate and private key pairs, if TLS server is used
 	RootCACert,
 	RootCAKey,
-	IntCACert,
+	IntCACert, // Intermediate signing cert for server and client certificates
 	IntCAKey,
 	ServerCert,
 	ServerKey []byte
@@ -33,66 +32,42 @@ type ServerHelper struct {
 	serverWG sync.WaitGroup // server instance goroutine wait group
 }
 
-// NewTCPServerHelper creates a new TCP server helper object.
-func NewTCPServerHelper(t *testing.T) *ServerHelper {
+// NewServerHelper creates a new server helper object.
+func NewServerHelper(t *testing.T) *ServerHelper {
 	if testing.Short() {
-		t.Skip("Skipping integration test in short testing mode")
-	}
-
-	server, err := neptulon.NewTCPServer(laddr, false)
-	if err != nil {
-		t.Fatal("Failed to create server:", err)
+		t.Skip("Skipping integration test in short testing mode.")
 	}
 
 	return &ServerHelper{
-		Server:  server,
+		Server:  neptulon.NewServer(laddr),
 		Address: laddr,
-
 		testing: t,
 	}
 }
 
-// NewTLSServerHelper creates a new server helper object with Transport Layer Security.
-func NewTLSServerHelper(t *testing.T) *ServerHelper {
-	if testing.Short() {
-		t.Skip("Skipping integration test in short testing mode")
-	}
-
+// UseTLS enables Transport Layer Security for the connections.
+func (sh *ServerHelper) UseTLS() *ServerHelper {
 	// generate TLS certs
 	certChain, err := ca.GenCertChain("FooBar", host, host, time.Hour, 512)
 	if err != nil {
-		t.Fatal("Failed to create TLS certificate chain:", err)
+		sh.testing.Fatal("Failed to create TLS certificate chain:", err)
 	}
 
-	server, err := neptulon.NewTLSServer(certChain.ServerCert, certChain.ServerKey, certChain.IntCACert, laddr, false)
-	if err != nil {
-		t.Fatal("Failed to create server:", err)
-	}
+	sh.RootCACert = certChain.RootCACert
+	sh.RootCAKey = certChain.RootCAKey
+	sh.IntCACert = certChain.IntCACert
+	sh.IntCAKey = certChain.IntCAKey
+	sh.ServerCert = certChain.ServerCert
+	sh.ServerKey = certChain.ServerKey
 
-	return &ServerHelper{
-		Server:     server,
-		RootCACert: certChain.RootCACert,
-		RootCAKey:  certChain.RootCAKey,
-		IntCACert:  certChain.IntCACert,
-		IntCAKey:   certChain.IntCAKey,
-		ServerCert: certChain.ServerCert,
-		ServerKey:  certChain.ServerKey,
-		Address:    laddr,
+	sh.Server.UseTLS(sh.ServerCert, sh.ServerKey, sh.IntCACert)
 
-		testing: t,
-	}
-}
-
-// MiddlewareIn registers middleware to handle incoming messagesh.
-func (sh *ServerHelper) MiddlewareIn(middleware ...func(ctx *neptulon.Ctx) error) *ServerHelper {
-	sh.Server.MiddlewareIn(middleware...)
 	return sh
 }
 
-// MiddlewareOut registers middleware to handle/intercept outgoing messages before they are sent.
-func (sh *ServerHelper) MiddlewareOut(middleware ...func(ctx *neptulon.Ctx) error) *ServerHelper {
-	sh.Server.MiddlewareOut(middleware...)
-	return sh
+// Middleware registers middleware to handle incoming request messages.
+func (sh *ServerHelper) Middleware(middleware ...func(ctx *neptulon.ReqCtx) error) {
+	sh.Server.Middleware(middleware...)
 }
 
 // Start starts the server.
@@ -110,23 +85,9 @@ func (sh *ServerHelper) Start() *ServerHelper {
 	return sh
 }
 
-// GetTCPClientHelper creates a client connection to this server instance using TCP and returns the connection wrapped in a ClientHelper.
-func (sh *ServerHelper) GetTCPClientHelper() *ClientHelper {
-	return NewClientHelper(sh.testing, sh.Address)
-}
-
-// GetTLSClientHelper creates a client connection to this server instance using TLS and returns the connection wrapped in a ClientHelper.
-func (sh *ServerHelper) GetTLSClientHelper() *ClientHelper {
-	cert, key, err := ca.GenClientCert(pkix.Name{
-		Organization: []string{"FooBar"},
-		CommonName:   "1",
-	}, time.Hour, 512, sh.IntCACert, sh.IntCAKey)
-
-	if err != nil {
-		sh.testing.Fatal(err)
-	}
-
-	return sh.GetTCPClientHelper().UseTLS(sh.IntCACert, cert, key)
+// GetConnHelper creates a client connection to this server instance and returns the connection wrapped in a ClientHelper.
+func (sh *ServerHelper) GetConnHelper() *ConnHelper {
+	return NewConnHelper(sh.testing, "ws://"+sh.Address)
 }
 
 // Close stops the server listener and connections.

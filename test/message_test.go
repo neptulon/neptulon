@@ -14,6 +14,10 @@ var (
 	msg5 = randstr.Get(5 * 1000 * 1000) // 5.0 MB
 )
 
-func TestEcho(t *testing.T) {
+func TestMessages(t *testing.T) {
+	// todo: verify all message echoes from small to big
+}
 
+func TestBidirectional(t *testing.T) {
+	// todo: test simultaneous read/writes
 }

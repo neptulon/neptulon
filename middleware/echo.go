@@ -3,10 +3,10 @@ package middleware
 import "github.com/neptulon/neptulon"
 
 // Echo sends incoming messages back as is.
-func Echo(ctx *neptulon.Ctx) error {
-	if err := ctx.Client.Send(ctx.Msg); err != nil {
+func Echo(ctx *neptulon.ReqCtx) error {
+	// unmarshall incoming message into response directly
+	if err := ctx.Params(&ctx.Res); err != nil {
 		return err
 	}
-
 	return ctx.Next()
 }
