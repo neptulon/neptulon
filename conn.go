@@ -116,6 +116,7 @@ func (c *Conn) receive(msg *message) error {
 }
 
 // UseConn reuses an established websocket.Conn.
+// This function blocks and does not return until the connection is closed by another goroutine.
 func (c *Conn) useConn(ws *websocket.Conn) {
 	c.ws = ws
 	c.startReceive()
