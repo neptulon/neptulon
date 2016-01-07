@@ -90,7 +90,7 @@ func (c *Conn) SendRequestArr(method string, resHandler func(res *ResCtx) error,
 	return c.SendRequest(method, params, resHandler)
 }
 
-// Close closes a connection.
+// Close closes the connection.
 func (c *Conn) Close() error {
 	c.closed = true
 	return c.ws.Close()
