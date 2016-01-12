@@ -5,7 +5,7 @@
 
 Neptulon is a bidirectional RPC framework with middleware support. Communication protocol is JSON-RPC over WebSockets which is full-duplex bidirectional.
 
-Neptulon framework is only ~400 lines of code, which makes it easy to fork, specialize, and maintain for specific purposes, if you need to.
+Neptulon framework is only about 400 lines of code, which makes it easy to fork, specialize, and maintain for specific purposes, if you need to.
 
 ## Example
 
