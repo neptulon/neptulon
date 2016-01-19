@@ -7,4 +7,5 @@ import "github.com/neptulon/neptulon"
 // If unsuccessful, connection will be closed right away.
 func CertAtuh(ctx *neptulon.ReqCtx) error {
 	// todo: ...
+	return ctx.Next()
 }

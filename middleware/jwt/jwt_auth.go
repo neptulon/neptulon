@@ -1,8 +1,10 @@
 package jwt
 
 import (
+	"fmt"
 	"log"
 
+	"github.com/dgrijalva/jwt-go"
 	"github.com/neptulon/neptulon"
 )
 
@@ -18,23 +20,26 @@ func JWT(ctx *neptulon.ReqCtx) error {
 		return nil
 	}
 
-	// if provided, client certificate is verified by the TLS listener so the peerCerts list in the connection is trusted
-	connState, _ := c.Conn.ConnectionState()
-	certs := connState.PeerCertificates
-	if len(certs) == 0 {
-		log.Println("Invalid JWT authentication attempt:", c.Conn.RemoteAddr())
-		c.Close()
-		return false
-	}
-
-	userID := certs[0].Subject.CommonName
-	c.Session().Set("userid", userID)
-	log.Printf("Client authenticated. TLS/IP: %v, User ID: %v, Conn ID: %v\n", c.Conn.RemoteAddr(), userID, c.ConnID())
-	return true
-
 	var t token
 	if err := ctx.Params(&t); err != nil {
 		return err
 	}
+
+	jt, err := jwt.Parse(t.Token, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
+		}
+		return "pass", nil
+	})
+
+	if err != nil || !jt.Valid {
+		log.Println("Invalid JWT authentication attempt:", ctx.Conn.RemoteAddr())
+		ctx.Conn.Close()
+		return err
+	}
+
+	userID := jt.Claims["userid"].(string)
+	ctx.Session.Set("userid", userID)
+	log.Printf("Client authenticated. TLS/IP: %v, User ID: %v, Conn ID: %v\n", ctx.Conn.RemoteAddr(), userID, ctx.Conn.ID)
 	return ctx.Next()
 }
