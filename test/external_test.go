@@ -4,6 +4,7 @@ import (
 	"flag"
 	"testing"
 
+	"github.com/neptulon/neptulon"
 	"github.com/neptulon/neptulon/middleware"
 )
 
@@ -24,7 +25,15 @@ func TestExternalClient(t *testing.T) {
 	rout := middleware.NewRouter()
 	sh.Middleware(rout.Middleware)
 	rout.Request("echo", middleware.Echo)
-	rout.Request("close", middleware.Echo)
+	rout.Request("close", func(ctx *neptulon.ReqCtx) error {
+		var body interface{}
+		if err := ctx.Params(&body); err != nil {
+			return err
+		}
+		t.Logf("Closed connection with message: %v\n", body)
+		ctx.Conn.Close()
+		return nil
+	})
 
 	// for {
 	// 	if !*ext {
