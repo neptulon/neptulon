@@ -168,16 +168,21 @@ func (c *Conn) startReceive() {
 		}
 
 		// if the message is a response
-		if resHandler, ok := c.resRoutes.GetOk(m.ID); ok {
-			err := resHandler.(func(ctx *ResCtx) error)(newResCtx(c, m.ID, m.Result, m.Error))
-			c.resRoutes.Delete(m.ID)
-			if err != nil {
-				log.Println("Error while handling response:", err)
+		if m.ID != "" && (m.Result != nil || m.Error != nil) {
+			if resHandler, ok := c.resRoutes.GetOk(m.ID); ok {
+				err := resHandler.(func(ctx *ResCtx) error)(newResCtx(c, m.ID, m.Result, m.Error))
+				c.resRoutes.Delete(m.ID)
+				if err != nil {
+					log.Println("Error while handling response:", err)
+					break
+				}
+			} else {
+				log.Println("Error while handling response: got response to a request with unknown ID:", m.ID)
 				break
 			}
-		} else {
-			log.Println("Error while handling response: got response to a request with unknown ID:", m.ID)
-			break
 		}
+
+		// if the message is not a JSON-RPC message
+		log.Printf("Received on unknown message. Conn ID: %v, Remote Addr: %v\n", c.ID, c.RemoteAddr())
 	}
 }

@@ -22,11 +22,12 @@ func TestExternalClient(t *testing.T) {
 	sh := NewServerHelper(t).Start()
 	defer sh.Close()
 
-	for {
-		rout := middleware.NewRouter()
-		sh.Middleware(rout.Middleware)
-		rout.Request("echo", middleware.Echo)
+	rout := middleware.NewRouter()
+	sh.Middleware(rout.Middleware)
+	rout.Request("echo", middleware.Echo)
+	rout.Request("close", middleware.Echo)
 
+	for {
 		if !*ext {
 			t.Log("Skipping external client integration test since -ext flag is not provided.")
 
