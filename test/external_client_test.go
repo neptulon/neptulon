@@ -17,7 +17,6 @@ var ext = flag.Bool("ext", false, "Run external client test case.")
 // * Send an {"method":"echo", "params":"Lorem ip sum..."} request to client.
 // * Wait for response and verify that message body is echoed properly in the response body.
 // * Repeat ad infinitum, until {"method":"close", "params":"..."} is received. Close message body is logged.
-
 func TestExternalClient(t *testing.T) {
 	sh := NewServerHelper(t).Start()
 	defer sh.Close()
@@ -32,6 +31,9 @@ func TestExternalClient(t *testing.T) {
 		}
 		t.Logf("Closed connection with message: %v\n", body)
 		ctx.Conn.Close()
+		return nil
+	})
+	sh.Server.ConnHandler(func(c *neptulon.Conn) error {
 		return nil
 	})
 
