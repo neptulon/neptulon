@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -25,7 +26,7 @@ type Server struct {
 	listener       net.Listener
 	wsConfig       websocket.Config
 	wg             sync.WaitGroup
-	closed         bool
+	running        bool
 	connHandler    func(c *Conn) error
 	disconnHandler func(c *Conn)
 }
@@ -106,8 +107,9 @@ func (s *Server) Start() error {
 	s.listener = l
 
 	log.Println("Server started:", s.addr)
+	s.running = true
 	err = http.Serve(l, mux)
-	if s.closed {
+	if !s.running {
 		return nil
 	}
 	return err
@@ -116,6 +118,10 @@ func (s *Server) Start() error {
 // SendRequest sends a JSON-RPC request through the connection denoted by the connection ID with an auto generated request ID.
 // resHandler is called when a response is returned.
 func (s *Server) SendRequest(connID string, method string, params interface{}, resHandler func(ctx *ResCtx) error) (reqID string, err error) {
+	if !s.running {
+		return "", errors.New("use of closed server")
+	}
+
 	if conn, ok := s.conns.GetOk(connID); ok {
 		return conn.(*Conn).SendRequest(method, params, resHandler)
 	}
@@ -131,7 +137,7 @@ func (s *Server) SendRequestArr(connID string, method string, resHandler func(ct
 
 // Close closes the network listener and the active connections.
 func (s *Server) Close() error {
-	s.closed = true
+	s.running = false
 	err := s.listener.Close()
 
 	// close all active connections discarding any read/writes that is going on currently
