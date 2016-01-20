@@ -1,6 +1,7 @@
 package neptulon
 
 import (
+	"errors"
 	"io"
 	"log"
 	"net"
@@ -14,13 +15,14 @@ import (
 
 // Conn is a client connection.
 type Conn struct {
-	ID         string
-	Session    *cmap.CMap
-	middleware []func(ctx *ReqCtx) error
-	resRoutes  *cmap.CMap // message ID (string) -> handler func(ctx *ResCtx) error : expected responses for requests that we've sent
-	ws         *websocket.Conn
-	deadline   time.Duration
-	closed     bool
+	ID           string
+	Session      *cmap.CMap
+	middleware   []func(ctx *ReqCtx) error
+	resRoutes    *cmap.CMap // message ID (string) -> handler func(ctx *ResCtx) error : expected responses for requests that we've sent
+	ws           *websocket.Conn
+	deadline     time.Duration
+	isClientConn bool
+	running      bool
 }
 
 // NewConn creates a new Conn object.
@@ -57,6 +59,7 @@ func (c *Conn) Connect(addr string) error {
 	}
 
 	c.ws = ws
+	c.running = true
 	go c.startReceive()
 	time.Sleep(time.Millisecond) // give receive goroutine a few cycles to start
 	return nil
@@ -64,6 +67,10 @@ func (c *Conn) Connect(addr string) error {
 
 // RemoteAddr returns the remote network address.
 func (c *Conn) RemoteAddr() net.Addr {
+	if c.ws == nil {
+		return nil
+	}
+
 	return c.ws.RemoteAddr()
 }
 
@@ -92,7 +99,7 @@ func (c *Conn) SendRequestArr(method string, resHandler func(res *ResCtx) error,
 
 // Close closes the connection.
 func (c *Conn) Close() error {
-	c.closed = true
+	c.running = false
 	return c.ws.Close()
 }
 
@@ -103,6 +110,10 @@ func (c *Conn) sendResponse(id string, result interface{}, err *ResError) error 
 
 // Send sends the given message through the connection.
 func (c *Conn) send(msg interface{}) error {
+	if !c.running {
+		return errors.New("use of closed connection")
+	}
+
 	if err := c.ws.SetWriteDeadline(time.Now().Add(c.deadline)); err != nil {
 		return err
 	}
@@ -112,6 +123,10 @@ func (c *Conn) send(msg interface{}) error {
 
 // Receive receives message from the connection.
 func (c *Conn) receive(msg *message) error {
+	if !c.running {
+		return errors.New("use of closed connection")
+	}
+
 	if err := c.ws.SetReadDeadline(time.Now().Add(c.deadline)); err != nil {
 		return err
 	}
@@ -123,11 +138,21 @@ func (c *Conn) receive(msg *message) error {
 // This function blocks and does not return until the connection is closed by another goroutine.
 func (c *Conn) useConn(ws *websocket.Conn) {
 	c.ws = ws
+	c.running = true
 	c.startReceive()
 }
 
 // startReceive starts receiving messages. This method blocks and does not return until the connection is closed.
 func (c *Conn) startReceive() {
+	// defer func() {
+	// 	if err := recover(); err != nil {
+	// 		const size = 64 << 10
+	// 		buf := make([]byte, size)
+	// 		buf = buf[:runtime.Stack(buf, false)]
+	// 		log.Printf("conn: panic serving %v: %v\n%s", c.remoteAddr, err, buf)
+	// 	}
+	// }()
+
 	// append the last middleware to request stack, which will write the response to connection, if any
 	c.middleware = append(c.middleware, func(ctx *ReqCtx) error {
 		if ctx.Res != nil || ctx.Err != nil {
@@ -148,7 +173,7 @@ func (c *Conn) startReceive() {
 			}
 
 			// if we closed the connection
-			if c.closed {
+			if !c.running {
 				log.Printf("Connection closed. Conn ID: %v, Remote Addr: %v\n", c.ID, c.RemoteAddr())
 				break
 			}
@@ -186,5 +211,5 @@ func (c *Conn) startReceive() {
 		}
 	}
 
-	c.closed = true
+	c.Close()
 }
