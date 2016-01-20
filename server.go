@@ -26,6 +26,7 @@ type Server struct {
 	wsConfig       websocket.Config
 	wg             sync.WaitGroup
 	closed         bool
+	connHandler    func(c *Conn) error
 	disconnHandler func(c *Conn)
 }
 
@@ -72,6 +73,12 @@ func (s *Server) Middleware(middleware ...func(ctx *ReqCtx) error) {
 	s.middleware = append(s.middleware, middleware...)
 }
 
+// ConnHandler registers a function to handle client connection events.
+// If handler returns error, connection is refused.
+func (s *Server) ConnHandler(handler func(c *Conn) error) {
+	s.connHandler = handler
+}
+
 // DisconnHandler registers a function to handle client disconnection events.
 func (s *Server) DisconnHandler(handler func(c *Conn)) {
 	s.disconnHandler = handler
@@ -82,7 +89,7 @@ func (s *Server) Start() error {
 	mux := http.NewServeMux()
 	mux.Handle("/", websocket.Server{
 		Config:  s.wsConfig,
-		Handler: s.wsHandler,
+		Handler: s.wsConnHandler,
 		Handshake: func(config *websocket.Config, req *http.Request) error {
 			s.wg.Add(1)                                  // todo: this needs to happen inside the gorotune executing the Start method and not the request goroutine or we'll miss some connections
 			config.Origin, _ = url.Parse(req.RemoteAddr) // we're interested in remote address and not origin header text
@@ -140,7 +147,7 @@ func (s *Server) Close() error {
 }
 
 // wsHandler handles incoming websocket connections.
-func (s *Server) wsHandler(ws *websocket.Conn) {
+func (s *Server) wsConnHandler(ws *websocket.Conn) {
 	defer s.wg.Done()
 	c, err := NewConn()
 	if err != nil {
@@ -148,6 +155,11 @@ func (s *Server) wsHandler(ws *websocket.Conn) {
 		return
 	}
 	c.Middleware(s.middleware...)
+
+	if err := s.connHandler(c); err != nil {
+		log.Println("Connection rejected by the connHandler:", err)
+		return
+	}
 	log.Printf("Client connected: Conn ID: %v, Remote Addr: %v\n", c.ID, ws.RemoteAddr())
 
 	s.conns.Set(c.ID, c)
