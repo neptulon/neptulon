@@ -33,8 +33,10 @@ type Server struct {
 // NewServer creates a new Neptulon server.
 func NewServer(addr string) *Server {
 	return &Server{
-		addr:  addr,
-		conns: cmap.New(),
+		addr:           addr,
+		conns:          cmap.New(),
+		connHandler:    func(c *Conn) error { return nil },
+		disconnHandler: func(c *Conn) {},
 	}
 }
 
