@@ -185,4 +185,6 @@ func (c *Conn) startReceive() {
 			break
 		}
 	}
+
+	c.closed = true
 }

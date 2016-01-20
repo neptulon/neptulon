@@ -19,13 +19,14 @@ import (
 
 // Server is a Neptulon server.
 type Server struct {
-	addr       string
-	conns      *cmap.CMap // conn ID -> *Conn
-	middleware []func(ctx *ReqCtx) error
-	listener   net.Listener
-	wsConfig   websocket.Config
-	wg         sync.WaitGroup
-	closed     bool
+	addr           string
+	conns          *cmap.CMap // conn ID -> *Conn
+	middleware     []func(ctx *ReqCtx) error
+	listener       net.Listener
+	wsConfig       websocket.Config
+	wg             sync.WaitGroup
+	closed         bool
+	disconnHandler func(c *Conn)
 }
 
 // NewServer creates a new Neptulon server.
@@ -69,6 +70,11 @@ func (s *Server) UseTLS(cert, privKey, clientCACert []byte) error {
 // Middleware registers middleware to handle incoming request messages.
 func (s *Server) Middleware(middleware ...func(ctx *ReqCtx) error) {
 	s.middleware = append(s.middleware, middleware...)
+}
+
+// DisconnHandler registers a function to handle client disconnection events.
+func (s *Server) DisconnHandler(handler func(c *Conn)) {
+	s.disconnHandler = handler
 }
 
 // Start the Neptulon server. This function blocks until server is closed.
@@ -147,4 +153,5 @@ func (s *Server) wsHandler(ws *websocket.Conn) {
 	s.conns.Set(c.ID, c)
 	c.useConn(ws)
 	s.conns.Delete(c.ID)
+	s.disconnHandler(c)
 }
