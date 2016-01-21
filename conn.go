@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"runtime"
 	"time"
 
 	"github.com/neptulon/cmap"
@@ -144,15 +145,6 @@ func (c *Conn) useConn(ws *websocket.Conn) {
 
 // startReceive starts receiving messages. This method blocks and does not return until the connection is closed.
 func (c *Conn) startReceive() {
-	// defer func() {
-	// 	if err := recover(); err != nil {
-	// 		const size = 64 << 10
-	// 		buf := make([]byte, size)
-	// 		buf = buf[:runtime.Stack(buf, false)]
-	// 		log.Printf("conn: panic serving %v: %v\n%s", c.remoteAddr, err, buf)
-	// 	}
-	// }()
-
 	// append the last middleware to request stack, which will write the response to connection, if any
 	c.middleware = append(c.middleware, func(ctx *ReqCtx) error {
 		if ctx.Res != nil || ctx.Err != nil {
@@ -184,10 +176,20 @@ func (c *Conn) startReceive() {
 
 		// if the message is a request
 		if m.Method != "" {
-			if err := newReqCtx(c, m.ID, m.Method, m.Params, c.middleware).Next(); err != nil {
-				log.Println("Error while handling request:", err)
-				break
-			}
+			go func() {
+				defer func() {
+					if err := recover(); err != nil {
+						const size = 64 << 10
+						buf := make([]byte, size)
+						buf = buf[:runtime.Stack(buf, false)]
+						log.Printf("conn: panic serving %v: %v\n%s", c.RemoteAddr(), err, buf)
+					}
+				}()
+
+				if err := newReqCtx(c, m.ID, m.Method, m.Params, c.middleware).Next(); err != nil {
+					log.Println("Error while handling request:", err)
+				}
+			}()
 
 			continue
 		}
