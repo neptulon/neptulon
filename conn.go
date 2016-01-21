@@ -181,7 +181,6 @@ func (c *Conn) startReceive() {
 		if m.Method != "" {
 			go func() {
 				defer recoverAndLog(c)
-
 				if err := newReqCtx(c, m.ID, m.Method, m.Params, c.middleware).Next(); err != nil {
 					log.Println("Error while handling request:", err)
 				}
@@ -200,7 +199,6 @@ func (c *Conn) startReceive() {
 		if resHandler, ok := c.resRoutes.GetOk(m.ID); ok {
 			go func() {
 				defer recoverAndLog(c)
-
 				err := resHandler.(func(ctx *ResCtx) error)(newResCtx(c, m.ID, m.Result, m.Error))
 				c.resRoutes.Delete(m.ID)
 				if err != nil {
