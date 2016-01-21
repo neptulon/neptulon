@@ -61,7 +61,10 @@ func (c *Conn) Connect(addr string) error {
 
 	c.ws = ws
 	c.connected = true
-	go c.startReceive()
+	go func() {
+		defer recoverAndLog(c)
+		c.startReceive()
+	}()
 	time.Sleep(time.Millisecond) // give receive goroutine a few cycles to start
 	return nil
 }
@@ -177,14 +180,7 @@ func (c *Conn) startReceive() {
 		// if the message is a request
 		if m.Method != "" {
 			go func() {
-				defer func() {
-					if err := recover(); err != nil {
-						const size = 64 << 10
-						buf := make([]byte, size)
-						buf = buf[:runtime.Stack(buf, false)]
-						log.Printf("conn: panic serving %v: %v\n%s", c.RemoteAddr(), err, buf)
-					}
-				}()
+				defer recoverAndLog(c)
 
 				if err := newReqCtx(c, m.ID, m.Method, m.Params, c.middleware).Next(); err != nil {
 					log.Println("Error while handling request:", err)
@@ -202,12 +198,15 @@ func (c *Conn) startReceive() {
 
 		// if the message is a response
 		if resHandler, ok := c.resRoutes.GetOk(m.ID); ok {
-			err := resHandler.(func(ctx *ResCtx) error)(newResCtx(c, m.ID, m.Result, m.Error))
-			c.resRoutes.Delete(m.ID)
-			if err != nil {
-				log.Println("Error while handling response:", err)
-				break
-			}
+			go func() {
+				defer recoverAndLog(c)
+
+				err := resHandler.(func(ctx *ResCtx) error)(newResCtx(c, m.ID, m.Result, m.Error))
+				c.resRoutes.Delete(m.ID)
+				if err != nil {
+					log.Println("Error while handling response:", err)
+				}
+			}()
 		} else {
 			log.Println("Error while handling response: got response to a request with unknown ID:", m.ID)
 			break
@@ -215,4 +214,13 @@ func (c *Conn) startReceive() {
 	}
 
 	c.Close()
+}
+
+func recoverAndLog(c *Conn) {
+	if err := recover(); err != nil {
+		const size = 64 << 10
+		buf := make([]byte, size)
+		buf = buf[:runtime.Stack(buf, false)]
+		log.Printf("conn: panic handling response %v: %v\n%s", c.RemoteAddr(), err, buf)
+	}
 }

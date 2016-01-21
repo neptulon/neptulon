@@ -163,6 +163,7 @@ func (s *Server) wsConnHandler(ws *websocket.Conn) {
 		return
 	}
 	c.Middleware(s.middleware...)
+	defer recoverAndLog(c)
 
 	if err := s.connHandler(c); err != nil {
 		log.Println("Connection rejected by the connHandler:", err)
