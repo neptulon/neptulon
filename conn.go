@@ -194,7 +194,8 @@ func (c *Conn) startReceive() {
 
 		// if the message is not a JSON-RPC message
 		if m.ID == "" || (m.Result == nil && m.Error == nil) {
-			log.Printf("Received an unknown message. Conn ID: %v, Remote Addr: %v\n", c.ID, c.RemoteAddr())
+			log.Printf("Received an unknown message. Conn ID: %v, Remote Addr: %v, Message: %v\n", c.ID, c.RemoteAddr(), m)
+			break
 		}
 
 		// if the message is a response
