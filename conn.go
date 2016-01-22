@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"runtime"
+	"sync"
 	"time"
 
 	"github.com/neptulon/cmap"
@@ -21,6 +22,7 @@ type Conn struct {
 	middleware   []func(ctx *ReqCtx) error
 	resRoutes    *cmap.CMap // message ID (string) -> handler func(ctx *ResCtx) error : expected responses for requests that we've sent
 	ws           *websocket.Conn
+	wg           sync.WaitGroup
 	deadline     time.Duration
 	isClientConn bool
 	connected    bool
@@ -61,8 +63,9 @@ func (c *Conn) Connect(addr string) error {
 
 	c.ws = ws
 	c.connected = true
+	c.wg.Add(1)
 	go func() {
-		defer recoverAndLog(c)
+		defer recoverAndLog(c, &c.wg)
 		c.startReceive()
 	}()
 	time.Sleep(time.Millisecond) // give receive goroutine a few cycles to start
@@ -179,8 +182,9 @@ func (c *Conn) startReceive() {
 
 		// if the message is a request
 		if m.Method != "" {
+			c.wg.Add(1)
 			go func() {
-				defer recoverAndLog(c)
+				defer recoverAndLog(c, &c.wg)
 				if err := newReqCtx(c, m.ID, m.Method, m.Params, c.middleware).Next(); err != nil {
 					log.Println("Error while handling request:", err)
 				}
@@ -197,8 +201,9 @@ func (c *Conn) startReceive() {
 
 		// if the message is a response
 		if resHandler, ok := c.resRoutes.GetOk(m.ID); ok {
+			c.wg.Add(1)
 			go func() {
-				defer recoverAndLog(c)
+				defer recoverAndLog(c, &c.wg)
 				err := resHandler.(func(ctx *ResCtx) error)(newResCtx(c, m.ID, m.Result, m.Error))
 				c.resRoutes.Delete(m.ID)
 				if err != nil {
@@ -214,11 +219,12 @@ func (c *Conn) startReceive() {
 	c.Close()
 }
 
-func recoverAndLog(c *Conn) {
+func recoverAndLog(c *Conn, wg *sync.WaitGroup) {
 	if err := recover(); err != nil {
 		const size = 64 << 10
 		buf := make([]byte, size)
 		buf = buf[:runtime.Stack(buf, false)]
 		log.Printf("conn: panic handling response %v: %v\n%s", c.RemoteAddr(), err, buf)
 	}
+	wg.Done()
 }
