@@ -166,17 +166,17 @@ func (c *Conn) startReceive() {
 		if err != nil {
 			// if we closed the connection
 			if !c.connected {
-				log.Printf("Connection closed. Conn ID: %v, Remote Addr: %v\n", c.ID, c.RemoteAddr())
+				log.Printf("conn: closed %v: %v", c.ID, c.RemoteAddr())
 				break
 			}
 
 			// if peer closed the connection
 			if err == io.EOF {
-				log.Printf("Peer disconnected. Conn ID: %v, Remote Addr: %v\n", c.ID, c.RemoteAddr())
+				log.Printf("conn: peer disconnected %v: %v", c.ID, c.RemoteAddr())
 				break
 			}
 
-			log.Println("Error while receiving message:", err)
+			log.Printf("conn: error while receiving message: %v", err)
 			break
 		}
 
@@ -186,7 +186,7 @@ func (c *Conn) startReceive() {
 			go func() {
 				defer recoverAndLog(c, &c.wg)
 				if err := newReqCtx(c, m.ID, m.Method, m.Params, c.middleware).Next(); err != nil {
-					log.Println("Error while handling request:", err)
+					log.Printf("conn: error while handling request: %v", err)
 				}
 			}()
 
@@ -195,7 +195,7 @@ func (c *Conn) startReceive() {
 
 		// if the message is not a JSON-RPC message
 		if m.ID == "" || (m.Result == nil && m.Error == nil) {
-			log.Printf("Received an unknown message. Conn ID: %v, Remote Addr: %v, Message: %v\n", c.ID, c.RemoteAddr(), m)
+			log.Printf("conn: received an unknown message %v: %v\n%v", c.ID, c.RemoteAddr(), m)
 			break
 		}
 
@@ -207,11 +207,11 @@ func (c *Conn) startReceive() {
 				err := resHandler.(func(ctx *ResCtx) error)(newResCtx(c, m.ID, m.Result, m.Error))
 				c.resRoutes.Delete(m.ID)
 				if err != nil {
-					log.Println("Error while handling response:", err)
+					log.Printf("conn: error while handling response: %v", err)
 				}
 			}()
 		} else {
-			log.Println("Error while handling response: got response to a request with unknown ID:", m.ID)
+			log.Printf("conn: error while handling response: got response to a request with unknown ID: %v", m.ID)
 			break
 		}
 	}

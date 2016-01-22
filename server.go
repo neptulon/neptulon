@@ -106,7 +106,7 @@ func (s *Server) Start() error {
 	}
 	s.listener = l
 
-	log.Println("Server started:", s.addr)
+	log.Printf("server: started %v", s.addr)
 	s.running = true
 	err = http.Serve(l, mux)
 	if !s.running {
@@ -150,7 +150,7 @@ func (s *Server) Close() error {
 	}
 
 	s.wg.Wait()
-	log.Println("Server stopped:", s.addr)
+	log.Printf("server: stopped %v", s.addr)
 	return nil
 }
 
@@ -158,17 +158,17 @@ func (s *Server) Close() error {
 func (s *Server) wsConnHandler(ws *websocket.Conn) {
 	c, err := NewConn()
 	if err != nil {
-		log.Println("Error while accepting connection:", err)
+		log.Printf("server: error while accepting connection: %v", err)
 		return
 	}
 	defer recoverAndLog(c, &s.wg)
 	c.Middleware(s.middleware...)
 
 	if err := s.connHandler(c); err != nil {
-		log.Println("Connection rejected by the connHandler:", err)
+		log.Printf("server: connection rejected by the connHandler: %v", err)
 		return
 	}
-	log.Printf("Client connected: Conn ID: %v, Remote Addr: %v\n", c.ID, ws.RemoteAddr())
+	log.Printf("server: client connected %v: %v", c.ID, ws.RemoteAddr())
 
 	s.conns.Set(c.ID, c)
 	c.useConn(ws)
