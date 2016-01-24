@@ -187,6 +187,7 @@ func (c *Conn) startReceive() {
 				defer recoverAndLog(c, &c.wg)
 				if err := newReqCtx(c, m.ID, m.Method, m.Params, c.middleware).Next(); err != nil {
 					log.Printf("conn: error while handling request: %v", err)
+					c.Close()
 				}
 			}()
 
@@ -208,6 +209,7 @@ func (c *Conn) startReceive() {
 				c.resRoutes.Delete(m.ID)
 				if err != nil {
 					log.Printf("conn: error while handling response: %v", err)
+					c.Close()
 				}
 			}()
 		} else {

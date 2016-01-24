@@ -12,6 +12,23 @@ import (
 	"github.com/neptulon/randstr"
 )
 
+type echoMsg struct {
+	Message string `json:"message"`
+}
+
+func handleEchoRes(t *testing.T) func(ctx *neptulon.ResCtx) error {
+	return func(ctx *neptulon.ResCtx) error {
+		var msg echoMsg
+		if err := ctx.Result(&msg); err != nil {
+			t.Fatal(err)
+		}
+		if msg.Message != "Hello!" {
+			t.Fatalf("expected: %v got: %v", "Hello!", msg.Message)
+		}
+		return nil
+	}
+}
+
 var (
 	msg1 = "Lorem ipsum dolor sit amet, consectetur adipiscing elit."
 	msg2 = "In sit amet lectus felis, at pellentesque turpis."
@@ -28,10 +45,6 @@ func TestBidirectional(t *testing.T) {
 	// todo: test simultaneous read/writes
 }
 
-type echoMsg struct {
-	Message string `json:"message"`
-}
-
 func TestEcho(t *testing.T) {
 	sh := NewServerHelper(t).Start()
 	defer sh.Close()
@@ -43,16 +56,7 @@ func TestEcho(t *testing.T) {
 	ch := sh.GetConnHelper().Connect()
 	defer ch.Close()
 
-	ch.SendRequest("echo", echoMsg{Message: "Hello!"}, func(ctx *neptulon.ResCtx) error {
-		var msg echoMsg
-		if err := ctx.Result(&msg); err != nil {
-			t.Fatal(err)
-		}
-		if msg.Message != "Hello!" {
-			t.Fatalf("expected: %v got: %v", "Hello!", msg.Message)
-		}
-		return nil
-	})
+	ch.SendRequest("echo", echoMsg{Message: "Hello!"}, handleEchoRes(t))
 }
 
 func TestEchoWithoutTestHelpers(t *testing.T) {
