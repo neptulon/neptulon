@@ -90,8 +90,9 @@ func (sh *ServerHelper) GetConnHelper() *ConnHelper {
 	return NewConnHelper(sh.testing, "ws://"+sh.Address)
 }
 
-// Close stops the server listener and connections.
-func (sh *ServerHelper) Close() {
+// CloseWait stops the server listener and connections.
+// Waits for all the goroutines handling the client connection to quit.
+func (sh *ServerHelper) CloseWait() {
 	if err := sh.Server.Close(); err != nil {
 		sh.testing.Fatal("Failed to stop the server:", err)
 	}
