@@ -151,6 +151,8 @@ func (c *Conn) useConn(ws *websocket.Conn) {
 
 // startReceive starts receiving messages. This method blocks and does not return until the connection is closed.
 func (c *Conn) startReceive() {
+	defer c.Close()
+
 	// append the last middleware to request stack, which will write the response to connection, if any
 	c.middleware = append(c.middleware, func(ctx *ReqCtx) error {
 		if ctx.Res != nil || ctx.Err != nil {
@@ -217,16 +219,14 @@ func (c *Conn) startReceive() {
 			break
 		}
 	}
-
-	c.Close()
 }
 
 func recoverAndLog(c *Conn, wg *sync.WaitGroup) {
+	defer wg.Done()
 	if err := recover(); err != nil {
 		const size = 64 << 10
 		buf := make([]byte, size)
 		buf = buf[:runtime.Stack(buf, false)]
 		log.Printf("conn: panic handling response %v: %v\n%s", c.RemoteAddr(), err, buf)
 	}
-	wg.Done()
 }
