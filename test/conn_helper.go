@@ -77,7 +77,6 @@ func (ch *ConnHelper) SendRequest(method string, params interface{}, resHandler 
 		ch.testing.Fatal("Failed to send request:", err)
 	}
 
-	ch.resWG.Wait()
 	return ch
 }
 
@@ -88,5 +87,5 @@ func (ch *ConnHelper) CloseWait() {
 		ch.testing.Fatal("Failed to close connection:", err)
 	}
 
-	ch.resWG.Wait()
+	// ch.resWG.Wait()
 }
