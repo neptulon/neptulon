@@ -4,7 +4,6 @@ import (
 	"flag"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/neptulon/neptulon"
 	"github.com/neptulon/neptulon/middleware"
@@ -21,10 +20,8 @@ var ext = flag.Bool("ext", false, "Run external client test case.")
 func TestExternalClient(t *testing.T) {
 	sh := NewServerHelper(t).Start()
 	defer sh.CloseWait()
-
 	var wg sync.WaitGroup
-	wg.Add(2) // one for response handler below, other for "close" request handler
-	// defer wg.Wait()
+	wg.Add(1) // one for response handler below, other for "close" request handler
 
 	// m := "Hello!"
 
@@ -49,47 +46,47 @@ func TestExternalClient(t *testing.T) {
 
 	rout.Request("close", func(ctx *neptulon.ReqCtx) error {
 		defer wg.Done()
-		var body interface{}
-		if err := ctx.Params(&body); err != nil {
+		if err := ctx.Params(&ctx.Res); err != nil {
 			return err
 		}
-		t.Logf("Closed connection with message from client: %v\n", body)
 		err := ctx.Next()
 		ctx.Conn.Close()
+		t.Logf("Closed connection with message from client: %v\n", ctx.Res)
 		return err
 	})
 
-	// use internal conn implementation instead to test the test case itself
-	if !*ext {
-		t.Log("Skipping external client integration test since -ext flag is not provided.")
-
-		ch := sh.GetConnHelper().Connect()
-		defer ch.CloseWait()
-
-		cm := "Thanks for echoing! Over and out."
-
-		// ch.SendRequest("echo", echoMsg{Message: m}, func(ctx *neptulon.ResCtx) error {
-		// 	var msg echoMsg
-		// 	if err := ctx.Result(&msg); err != nil {
-		// 		t.Fatal(err)
-		// 	}
-		// 	if msg.Message != m {
-		// 		t.Fatalf("expected: %v got: %v", m, msg.Message)
-		// 	}
-		// 	return nil
-		// })
-
-		ch.SendRequest("close", echoMsg{Message: cm}, func(ctx *neptulon.ResCtx) error {
-			var msg echoMsg
-			if err := ctx.Result(&msg); err != nil {
-				t.Fatal(err)
-			}
-			if msg.Message != cm {
-				t.Fatalf("expected: %v got: %v", cm, msg.Message)
-			}
-			return nil
-		})
-
-		time.Sleep(time.Second)
+	if *ext {
+		return
 	}
+
+	// use internal conn implementation instead to test the test case itself
+	t.Log("Skipping external client integration test since -ext flag is not provided.")
+	ch := sh.GetConnHelper().Connect()
+	defer ch.CloseWait()
+	cm := "Thanks for echoing! Over and out."
+
+	// ch.SendRequest("echo", echoMsg{Message: m}, func(ctx *neptulon.ResCtx) error {
+	// 	var msg echoMsg
+	// 	if err := ctx.Result(&msg); err != nil {
+	// 		t.Fatal(err)
+	// 	}
+	// 	if msg.Message != m {
+	// 		t.Fatalf("expected: %v got: %v", m, msg.Message)
+	// 	}
+	// 	return nil
+	// })
+
+	ch.SendRequest("close", echoMsg{Message: cm}, func(ctx *neptulon.ResCtx) error {
+		var msg echoMsg
+		if err := ctx.Result(&msg); err != nil {
+			t.Fatal(err)
+		}
+		if msg.Message != cm {
+			t.Fatalf("expected: %v got: %v", cm, msg.Message)
+		}
+		t.Log("client: server accepted and echoed 'close' message body. bye!")
+		return nil
+	})
+
+	wg.Wait()
 }

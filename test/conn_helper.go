@@ -87,5 +87,5 @@ func (ch *ConnHelper) CloseWait() {
 		ch.testing.Fatal("Failed to close connection:", err)
 	}
 
-	// ch.resWG.Wait()
+	ch.resWG.Wait()
 }
