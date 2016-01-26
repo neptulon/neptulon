@@ -21,10 +21,11 @@ func TestExternalClient(t *testing.T) {
 	sh := NewServerHelper(t).Start()
 	defer sh.CloseWait()
 	var wg sync.WaitGroup
-	wg.Add(2) // one for response handler below, other for "close" request handler
+	wg.Add(3) // one for response handler below, other two for "close" request client-server interaction
 
 	m := "Hello!"
 
+	// send 'echo' request to client upon connection (blocks test if no response is received)
 	sh.Server.ConnHandler(func(c *neptulon.Conn) error {
 		c.SendRequest("echo", echoMsg{Message: m}, func(ctx *neptulon.ResCtx) error {
 			defer wg.Done()
@@ -41,11 +42,13 @@ func TestExternalClient(t *testing.T) {
 		return nil
 	})
 
-	rout := middleware.NewRouter()
-	sh.Middleware(rout.Middleware)
-	rout.Request("echo", middleware.Echo)
+	// handle 'echo' requests via the 'echo middleware'
+	srout := middleware.NewRouter()
+	sh.Middleware(srout.Middleware)
+	srout.Request("echo", middleware.Echo)
 
-	rout.Request("close", func(ctx *neptulon.ReqCtx) error {
+	// handle 'close' request (blocks test if no response is received)
+	srout.Request("close", func(ctx *neptulon.ReqCtx) error {
 		defer wg.Done()
 		if err := ctx.Params(&ctx.Res); err != nil {
 			return err
@@ -68,8 +71,12 @@ func TestExternalClient(t *testing.T) {
 	defer ch.CloseWait()
 	cm := "Thanks for echoing! Over and out."
 
-	// todo: handle server's echo request with a client router here!!!!!!!!!!!!!!!!!!
+	// handle 'echo' requests via the 'echo middleware'
+	crout := middleware.NewRouter()
+	ch.Middleware(crout.Middleware)
+	crout.Request("echo", middleware.Echo)
 
+	// handle 'echo' request and send 'close' request upon echo response
 	ch.SendRequest("echo", echoMsg{Message: m}, func(ctx *neptulon.ResCtx) error {
 		var msg echoMsg
 		if err := ctx.Result(&msg); err != nil {
@@ -82,6 +89,7 @@ func TestExternalClient(t *testing.T) {
 
 		// send close request after getting our echo message back
 		ch.SendRequest("close", echoMsg{Message: cm}, func(ctx *neptulon.ResCtx) error {
+			wg.Done()
 			var msg echoMsg
 			if err := ctx.Result(&msg); err != nil {
 				t.Fatal(err)
