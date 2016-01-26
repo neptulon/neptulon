@@ -107,5 +107,5 @@ func TestExternalClient(t *testing.T) {
 		return nil
 	})
 
-	wg.Wait()
+	// wg.Wait()
 }
