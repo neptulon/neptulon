@@ -23,22 +23,22 @@ func TestExternalClient(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(1) // one for response handler below, other for "close" request handler
 
-	// m := "Hello!"
+	m := "Hello!"
 
-	// sh.Server.ConnHandler(func(c *neptulon.Conn) error {
-	// 	c.SendRequest("echo", echoMsg{Message: m}, func(ctx *neptulon.ResCtx) error {
-	// 		defer wg.Done()
-	// 		var msg echoMsg
-	// 		if err := ctx.Result(&msg); err != nil {
-	// 			t.Fatal(err)
-	// 		}
-	// 		if msg.Message != m {
-	// 			t.Fatalf("expected: %v got: %v", m, msg.Message)
-	// 		}
-	// 		return nil
-	// 	})
-	// 	return nil
-	// })
+	sh.Server.ConnHandler(func(c *neptulon.Conn) error {
+		c.SendRequest("echo", echoMsg{Message: m}, func(ctx *neptulon.ResCtx) error {
+			defer wg.Done()
+			var msg echoMsg
+			if err := ctx.Result(&msg); err != nil {
+				t.Fatal(err)
+			}
+			if msg.Message != m {
+				t.Fatalf("expected: %v got: %v", m, msg.Message)
+			}
+			return nil
+		})
+		return nil
+	})
 
 	rout := middleware.NewRouter()
 	sh.Middleware(rout.Middleware)
@@ -51,7 +51,7 @@ func TestExternalClient(t *testing.T) {
 		}
 		err := ctx.Next()
 		ctx.Conn.Close()
-		t.Logf("Closed connection with message from client: %v\n", ctx.Res)
+		t.Logf("test: closed connection with message from client: %v\n", ctx.Res)
 		return err
 	})
 
@@ -66,26 +66,29 @@ func TestExternalClient(t *testing.T) {
 	defer ch.CloseWait()
 	cm := "Thanks for echoing! Over and out."
 
-	// ch.SendRequest("echo", echoMsg{Message: m}, func(ctx *neptulon.ResCtx) error {
-	// 	var msg echoMsg
-	// 	if err := ctx.Result(&msg); err != nil {
-	// 		t.Fatal(err)
-	// 	}
-	// 	if msg.Message != m {
-	// 		t.Fatalf("expected: %v got: %v", m, msg.Message)
-	// 	}
-	// 	return nil
-	// })
-
-	ch.SendRequest("close", echoMsg{Message: cm}, func(ctx *neptulon.ResCtx) error {
+	ch.SendRequest("echo", echoMsg{Message: m}, func(ctx *neptulon.ResCtx) error {
 		var msg echoMsg
 		if err := ctx.Result(&msg); err != nil {
 			t.Fatal(err)
 		}
-		if msg.Message != cm {
-			t.Fatalf("expected: %v got: %v", cm, msg.Message)
+		if msg.Message != m {
+			t.Fatalf("expected: %v got: %v", m, msg.Message)
 		}
-		t.Log("client: server accepted and echoed 'close' message body. bye!")
+		t.Log("client: server accepted and echoed 'echo' request message body")
+
+		// send close request after getting our echo message back
+		ch.SendRequest("close", echoMsg{Message: cm}, func(ctx *neptulon.ResCtx) error {
+			var msg echoMsg
+			if err := ctx.Result(&msg); err != nil {
+				t.Fatal(err)
+			}
+			if msg.Message != cm {
+				t.Fatalf("expected: %v got: %v", cm, msg.Message)
+			}
+			t.Log("client: server accepted and echoed 'close' request message body. bye!")
+			return nil
+		})
+
 		return nil
 	})
 
