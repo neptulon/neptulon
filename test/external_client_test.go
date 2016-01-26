@@ -21,7 +21,7 @@ func TestExternalClient(t *testing.T) {
 	sh := NewServerHelper(t).Start()
 	defer sh.CloseWait()
 	var wg sync.WaitGroup
-	wg.Add(1) // one for response handler below, other for "close" request handler
+	wg.Add(2) // one for response handler below, other for "close" request handler
 
 	m := "Hello!"
 
@@ -33,8 +33,9 @@ func TestExternalClient(t *testing.T) {
 				t.Fatal(err)
 			}
 			if msg.Message != m {
-				t.Fatalf("expected: %v got: %v", m, msg.Message)
+				t.Fatalf("server: expected: %v got: %v", m, msg.Message)
 			}
+			t.Logf("server: client sent 'echo' request message: %v", msg.Message)
 			return nil
 		})
 		return nil
@@ -51,11 +52,12 @@ func TestExternalClient(t *testing.T) {
 		}
 		err := ctx.Next()
 		ctx.Conn.Close()
-		t.Logf("test: closed connection with message from client: %v\n", ctx.Res)
+		t.Logf("server: closed connection with message from client: %v\n", ctx.Res)
 		return err
 	})
 
 	if *ext {
+		t.Log("Starter server waiting for external client integration test since.")
 		wg.Wait()
 		return
 	}
@@ -66,13 +68,15 @@ func TestExternalClient(t *testing.T) {
 	defer ch.CloseWait()
 	cm := "Thanks for echoing! Over and out."
 
+	// todo: handle server's echo request with a client router here!!!!!!!!!!!!!!!!!!
+
 	ch.SendRequest("echo", echoMsg{Message: m}, func(ctx *neptulon.ResCtx) error {
 		var msg echoMsg
 		if err := ctx.Result(&msg); err != nil {
 			t.Fatal(err)
 		}
 		if msg.Message != m {
-			t.Fatalf("expected: %v got: %v", m, msg.Message)
+			t.Fatalf("client: expected: %v got: %v", m, msg.Message)
 		}
 		t.Log("client: server accepted and echoed 'echo' request message body")
 
@@ -83,7 +87,7 @@ func TestExternalClient(t *testing.T) {
 				t.Fatal(err)
 			}
 			if msg.Message != cm {
-				t.Fatalf("expected: %v got: %v", cm, msg.Message)
+				t.Fatalf("client: expected: %v got: %v", cm, msg.Message)
 			}
 			t.Log("client: server accepted and echoed 'close' request message body. bye!")
 			return nil
