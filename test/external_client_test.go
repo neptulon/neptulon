@@ -56,6 +56,7 @@ func TestExternalClient(t *testing.T) {
 	})
 
 	if *ext {
+		wg.Wait()
 		return
 	}
 
