@@ -19,7 +19,7 @@ var ext = flag.Bool("ext", false, "Run external client test case.")
 // * Repeat ad infinitum, until {"method":"close", "params":"{"message": "..."}"} is received. Close message body is logged.
 func TestExternalClient(t *testing.T) {
 	sh := NewServerHelper(t).Start()
-	defer sh.CloseWait()
+	// defer sh.CloseWait()
 	var wg sync.WaitGroup
 
 	m := "Hello!"
@@ -36,7 +36,7 @@ func TestExternalClient(t *testing.T) {
 			if msg.Message != m {
 				t.Fatalf("server: expected: %v got: %v", m, msg.Message)
 			}
-			t.Logf("server: client sent 'echo' response message: %v", msg.Message)
+			t.Logf("server: client sent response to our 'echo' request: %v", msg.Message)
 			return nil
 		})
 		return nil
@@ -69,7 +69,7 @@ func TestExternalClient(t *testing.T) {
 	// use internal conn implementation instead to test the test case itself
 	t.Log("Skipping external client integration test since -ext flag is not provided.")
 	ch := sh.GetConnHelper().Connect()
-	defer ch.CloseWait()
+	// defer ch.CloseWait()
 	cm := "Thanks for echoing! Over and out."
 
 	// handle 'echo' requests via the 'echo middleware'
@@ -78,7 +78,7 @@ func TestExternalClient(t *testing.T) {
 	crout.Request("echo", middleware.Echo)
 
 	// handle 'echo' request and send 'close' request upon echo response
-	wg.Add(1)
+	wg.Add(2)
 	ch.SendRequest("echo", echoMsg{Message: m}, func(ctx *neptulon.ResCtx) error {
 		defer wg.Done()
 		var msg echoMsg
@@ -91,7 +91,6 @@ func TestExternalClient(t *testing.T) {
 		t.Log("client: server accepted and echoed 'echo' request message body")
 
 		// send close request after getting our echo message back
-		wg.Add(1)
 		ch.SendRequest("close", echoMsg{Message: cm}, func(ctx *neptulon.ResCtx) error {
 			defer wg.Done()
 			var msg echoMsg
