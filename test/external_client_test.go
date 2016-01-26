@@ -44,6 +44,7 @@ func TestExternalClient(t *testing.T) {
 
 	// handle 'echo' requests via the 'echo middleware'
 	srout := middleware.NewRouter()
+	sh.Middleware(srout.Middleware)
 	srout.Request("echo", middleware.Echo)
 
 	// handle 'close' request (blocks test if no response is received)
@@ -73,6 +74,7 @@ func TestExternalClient(t *testing.T) {
 
 	// handle 'echo' requests via the 'echo middleware'
 	crout := middleware.NewRouter()
+	ch.Middleware(crout.Middleware)
 	crout.Request("echo", middleware.Echo)
 
 	// handle 'echo' request and send 'close' request upon echo response
