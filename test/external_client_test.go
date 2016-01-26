@@ -21,11 +21,11 @@ func TestExternalClient(t *testing.T) {
 	sh := NewServerHelper(t).Start()
 	defer sh.CloseWait()
 	var wg sync.WaitGroup
-	wg.Add(3) // one for response handler below, other two for "close" request client-server interaction
 
 	m := "Hello!"
 
 	// send 'echo' request to client upon connection (blocks test if no response is received)
+	wg.Add(1)
 	sh.Server.ConnHandler(func(c *neptulon.Conn) error {
 		c.SendRequest("echo", echoMsg{Message: m}, func(ctx *neptulon.ResCtx) error {
 			defer wg.Done()
@@ -44,10 +44,10 @@ func TestExternalClient(t *testing.T) {
 
 	// handle 'echo' requests via the 'echo middleware'
 	srout := middleware.NewRouter()
-	sh.Middleware(srout.Middleware)
 	srout.Request("echo", middleware.Echo)
 
 	// handle 'close' request (blocks test if no response is received)
+	wg.Add(1)
 	srout.Request("close", func(ctx *neptulon.ReqCtx) error {
 		defer wg.Done()
 		if err := ctx.Params(&ctx.Res); err != nil {
@@ -73,11 +73,12 @@ func TestExternalClient(t *testing.T) {
 
 	// handle 'echo' requests via the 'echo middleware'
 	crout := middleware.NewRouter()
-	ch.Middleware(crout.Middleware)
 	crout.Request("echo", middleware.Echo)
 
 	// handle 'echo' request and send 'close' request upon echo response
+	wg.Add(1)
 	ch.SendRequest("echo", echoMsg{Message: m}, func(ctx *neptulon.ResCtx) error {
+		defer wg.Done()
 		var msg echoMsg
 		if err := ctx.Result(&msg); err != nil {
 			t.Fatal(err)
@@ -88,8 +89,9 @@ func TestExternalClient(t *testing.T) {
 		t.Log("client: server accepted and echoed 'echo' request message body")
 
 		// send close request after getting our echo message back
+		wg.Add(1)
 		ch.SendRequest("close", echoMsg{Message: cm}, func(ctx *neptulon.ResCtx) error {
-			wg.Done()
+			defer wg.Done()
 			var msg echoMsg
 			if err := ctx.Result(&msg); err != nil {
 				t.Fatal(err)
