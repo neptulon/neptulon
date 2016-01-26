@@ -35,7 +35,7 @@ func TestExternalClient(t *testing.T) {
 			if msg.Message != m {
 				t.Fatalf("server: expected: %v got: %v", m, msg.Message)
 			}
-			t.Logf("server: client sent 'echo' request message: %v", msg.Message)
+			t.Logf("server: client sent 'echo' response message: %v", msg.Message)
 			return nil
 		})
 		return nil
