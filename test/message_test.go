@@ -46,6 +46,7 @@ func TestEchoWithoutTestHelpers(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer ws.Close()
 	if err := websocket.JSON.Send(ws, map[string]string{"id": "123", "method": "test"}); err != nil {
 		t.Fatal(err)
 	}
