@@ -63,6 +63,7 @@ func (c *Conn) Connect(addr string) error {
 
 	c.ws = ws
 	c.connected = true
+	c.isClientConn = true
 	c.wg.Add(1)
 	go func() {
 		defer recoverAndLog(c, &c.wg)
