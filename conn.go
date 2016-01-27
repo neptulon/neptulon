@@ -154,15 +154,6 @@ func (c *Conn) useConn(ws *websocket.Conn) {
 func (c *Conn) startReceive() {
 	defer c.Close()
 
-	// append the last middleware to request stack, which will write the response to connection, if any
-	c.middleware = append(c.middleware, func(ctx *ReqCtx) error {
-		if ctx.Res != nil || ctx.Err != nil {
-			return ctx.Conn.sendResponse(ctx.ID, ctx.Res, ctx.Err)
-		}
-
-		return nil
-	})
-
 	for {
 		var m message
 		err := c.receive(&m)

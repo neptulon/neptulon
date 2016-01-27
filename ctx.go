@@ -49,8 +49,14 @@ func (ctx *ReqCtx) Params(v interface{}) error {
 func (ctx *ReqCtx) Next() error {
 	ctx.mwIndex++
 
+	// call next middleware in the stack, if any
 	if ctx.mwIndex <= len(ctx.mw) {
 		return ctx.mw[ctx.mwIndex-1](ctx)
+	}
+
+	// send the response, if any
+	if ctx.Res != nil || ctx.Err != nil {
+		return ctx.Conn.sendResponse(ctx.ID, ctx.Res, ctx.Err)
 	}
 
 	return nil
