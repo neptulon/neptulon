@@ -27,7 +27,7 @@ var (
 func TestEchoWithoutTestHelpers(t *testing.T) {
 	s := neptulon.NewServer("127.0.0.1:3001")
 	go s.Start()
-	time.Sleep(time.Millisecond)
+	time.Sleep(time.Millisecond * 50)
 	defer s.Close()
 
 	var wg sync.WaitGroup
