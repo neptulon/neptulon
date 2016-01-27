@@ -4,6 +4,7 @@ import (
 	"flag"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/neptulon/neptulon"
 	"github.com/neptulon/neptulon/middleware"
@@ -18,10 +19,9 @@ var ext = flag.Bool("ext", false, "Run external client test case.")
 // * Echo any incoming request message body as is within a response message.
 // * Repeat ad infinitum, until {"method":"close", "params":"{"message": "..."}"} is received. Close message body is logged.
 func TestExternalClient(t *testing.T) {
-	sh := NewServerHelper(t).Start()
-	// defer sh.CloseWait()
+	sh := NewServerHelper(t)
+	// sh.Middleware(middleware.Logger)
 	var wg sync.WaitGroup
-
 	m := "Hello!"
 
 	// send 'echo' request to client upon connection (blocks test if no response is received)
@@ -60,6 +60,8 @@ func TestExternalClient(t *testing.T) {
 		return err
 	})
 
+	defer sh.Start().CloseWait()
+
 	if *ext {
 		t.Log("Starter server waiting for external client integration test since.")
 		wg.Wait()
@@ -68,14 +70,15 @@ func TestExternalClient(t *testing.T) {
 
 	// use internal conn implementation instead to test the test case itself
 	t.Log("Skipping external client integration test since -ext flag is not provided.")
-	ch := sh.GetConnHelper().Connect()
-	// defer ch.CloseWait()
+	ch := sh.GetConnHelper()
+	ch.Middleware(middleware.Logger)
 	cm := "Thanks for echoing! Over and out."
 
 	// handle 'echo' requests via the 'echo middleware'
 	crout := middleware.NewRouter()
-	ch.Middleware(crout.Middleware)
+	ch.Conn.Middleware(crout.Middleware)
 	crout.Request("echo", middleware.Echo)
+	defer ch.Connect().CloseWait()
 
 	// handle 'echo' request and send 'close' request upon echo response
 	wg.Add(2)
@@ -108,4 +111,5 @@ func TestExternalClient(t *testing.T) {
 	})
 
 	// wg.Wait()
+	time.Sleep(time.Second)
 }
