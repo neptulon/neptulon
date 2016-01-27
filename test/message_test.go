@@ -92,24 +92,5 @@ func TestEchoWithoutTestHelpers(t *testing.T) {
 }
 
 func TestTLS(t *testing.T) {
-	// sh := NewServerHelper(t).UseTLS().Start()
-	// defer sh.Close()
-	//
-	// rout := middleware.NewRouter()
-	// sh.Middleware(rout.Middleware)
-	// rout.Request("echo", middleware.Echo)
-	//
-	// ch := sh.GetConnHelper().UseTLS().Connect()
-	// defer ch.Close()
-	//
-	// ch.SendRequest("echo", echoMsg{Message: "Hello!"}, func(ctx *neptulon.ResCtx) error {
-	// 	var msg echoMsg
-	// 	if err := ctx.Result(&msg); err != nil {
-	// 		t.Fatal(err)
-	// 	}
-	// 	if msg.Message != "Hello!" {
-	// 		t.Fatalf("expected: %v got: %v", "Hello!", msg.Message)
-	// 	}
-	// 	return nil
-	// })
+	// todo: ...
 }
