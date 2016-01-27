@@ -4,7 +4,6 @@ import (
 	"flag"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/neptulon/neptulon"
 	"github.com/neptulon/neptulon/middleware"
@@ -14,20 +13,23 @@ var ext = flag.Bool("ext", false, "Run external client test case.")
 
 // Helper method for testing client implementations in other languages.
 // Flow of events for this function is:
-// * Send a {"method":"echo", "params":{"message": "..."}} request to client upon connection,
+// * Send a {"method":"echo", "params":{"message": "..."}} request to client upon first 'echo' request from client,
 //   and verify that message body is echoed properly in the response body.
 // * Echo any incoming request message body as is within a response message.
 // * Repeat ad infinitum, until {"method":"close", "params":"{"message": "..."}"} is received. Close message body is logged.
 func TestExternalClient(t *testing.T) {
 	sh := NewServerHelper(t)
-	// sh.Middleware(middleware.Logger)
+	sh.Middleware(middleware.Logger)
 	var wg sync.WaitGroup
 	m := "Hello!"
 
-	// send 'echo' request to client upon connection (blocks test if no response is received)
-	wg.Add(1)
-	sh.Server.ConnHandler(func(c *neptulon.Conn) error {
-		c.SendRequest("echo", echoMsg{Message: m}, func(ctx *neptulon.ResCtx) error {
+	// handle 'echo' requests via the 'echo middleware'
+	srout := middleware.NewRouter()
+	sh.Middleware(srout.Middleware)
+	srout.Request("echo", func(ctx *neptulon.ReqCtx) error {
+		// send 'echo' request to client upon connection (blocks test if no response is received)
+		wg.Add(1)
+		ctx.Conn.SendRequest("echo", echoMsg{Message: m}, func(ctx *neptulon.ResCtx) error {
 			defer wg.Done()
 			var msg echoMsg
 			if err := ctx.Result(&msg); err != nil {
@@ -39,13 +41,13 @@ func TestExternalClient(t *testing.T) {
 			t.Logf("server: client sent response to our 'echo' request: %v", msg.Message)
 			return nil
 		})
-		return nil
-	})
 
-	// handle 'echo' requests via the 'echo middleware'
-	srout := middleware.NewRouter()
-	sh.Middleware(srout.Middleware)
-	srout.Request("echo", middleware.Echo)
+		// unmarshall incoming message into response directly
+		if err := ctx.Params(&ctx.Res); err != nil {
+			return err
+		}
+		return ctx.Next()
+	})
 
 	// handle 'close' request (blocks test if no response is received)
 	wg.Add(1)
@@ -55,7 +57,7 @@ func TestExternalClient(t *testing.T) {
 			return err
 		}
 		err := ctx.Next()
-		ctx.Conn.Close()
+		// ctx.Conn.Close()
 		t.Logf("server: closed connection with message from client: %v\n", ctx.Res)
 		return err
 	})
@@ -110,6 +112,5 @@ func TestExternalClient(t *testing.T) {
 		return nil
 	})
 
-	// wg.Wait()
-	time.Sleep(time.Second)
+	wg.Wait()
 }

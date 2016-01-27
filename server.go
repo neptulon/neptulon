@@ -27,7 +27,6 @@ type Server struct {
 	wsConfig       websocket.Config
 	wg             sync.WaitGroup
 	running        bool
-	connHandler    func(c *Conn) error
 	disconnHandler func(c *Conn)
 }
 
@@ -36,7 +35,6 @@ func NewServer(addr string) *Server {
 	return &Server{
 		addr:           addr,
 		conns:          cmap.New(),
-		connHandler:    func(c *Conn) error { return nil },
 		disconnHandler: func(c *Conn) {},
 	}
 }
@@ -74,12 +72,6 @@ func (s *Server) UseTLS(cert, privKey, clientCACert []byte) error {
 // Middleware registers middleware to handle incoming request messages.
 func (s *Server) Middleware(middleware ...func(ctx *ReqCtx) error) {
 	s.middleware = append(s.middleware, middleware...)
-}
-
-// ConnHandler registers a function to handle client connection events.
-// If handler returns error, connection is refused.
-func (s *Server) ConnHandler(handler func(c *Conn) error) {
-	s.connHandler = handler
 }
 
 // DisconnHandler registers a function to handle client disconnection events.
@@ -164,10 +156,6 @@ func (s *Server) wsConnHandler(ws *websocket.Conn) {
 	defer recoverAndLog(c, &s.wg)
 	c.Middleware(s.middleware...)
 
-	if err := s.connHandler(c); err != nil {
-		log.Printf("server: connection rejected by the connHandler: %v", err)
-		return
-	}
 	log.Printf("server: client connected %v: %v", c.ID, ws.RemoteAddr())
 
 	s.conns.Set(c.ID, c)
