@@ -1,7 +1,6 @@
 package test
 
 import (
-	"sync"
 	"testing"
 	"time"
 
@@ -30,15 +29,11 @@ func TestEchoWithoutTestHelpers(t *testing.T) {
 	time.Sleep(time.Millisecond * 50)
 	defer s.Close()
 
-	var wg sync.WaitGroup
 	s.Middleware(func(ctx *neptulon.ReqCtx) error {
-		defer wg.Done()
 		t.Log("Request received:", ctx.Method)
 		ctx.Res = "response-wow!"
 		return ctx.Next()
 	})
-
-	wg.Add(1)
 
 	origin := "http://127.0.0.1"
 	url := "ws://127.0.0.1:3001"
@@ -55,7 +50,6 @@ func TestEchoWithoutTestHelpers(t *testing.T) {
 	}
 	t.Log("Got response:", res)
 
-	wg.Wait()
 	if err := ws.Close(); err != nil {
 		t.Fatal(err)
 	}
