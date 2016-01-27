@@ -87,4 +87,5 @@ func (ch *ConnHelper) CloseWait() {
 	if err := ch.Conn.Close(); err != nil {
 		ch.testing.Fatal("Failed to close connection:", err)
 	}
+	time.Sleep(time.Millisecond * 10)
 }
