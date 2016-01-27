@@ -57,7 +57,7 @@ func TestExternalClient(t *testing.T) {
 			return err
 		}
 		err := ctx.Next()
-		// ctx.Conn.Close()
+		// ctx.Conn.Close() // todo: investigate the error message!!!
 		t.Logf("server: closed connection with message from client: %v\n", ctx.Res)
 		return err
 	})
