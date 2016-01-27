@@ -33,15 +33,16 @@ func TestBidirectional(t *testing.T) {
 }
 
 func TestEcho(t *testing.T) {
-	sh := NewServerHelper(t).Start()
-	defer sh.CloseWait()
-
+	sh := NewServerHelper(t)
 	rout := middleware.NewRouter()
+	sh.Middleware(middleware.Logger)
 	sh.Middleware(rout.Middleware)
 	rout.Request("echo", middleware.Echo)
+	defer sh.Start().CloseWait()
 
-	ch := sh.GetConnHelper().Connect()
-	defer ch.CloseWait()
+	ch := sh.GetConnHelper()
+	ch.Middleware(middleware.Logger)
+	defer ch.Connect().CloseWait()
 
 	m := "Hello!"
 	ch.SendRequest("echo", echoMsg{Message: m}, func(ctx *neptulon.ResCtx) error {

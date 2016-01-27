@@ -83,9 +83,7 @@ func TestExternalClient(t *testing.T) {
 	defer ch.Connect().CloseWait()
 
 	// handle 'echo' request and send 'close' request upon echo response
-	wg.Add(2)
 	ch.SendRequest("echo", echoMsg{Message: m}, func(ctx *neptulon.ResCtx) error {
-		defer wg.Done()
 		var msg echoMsg
 		if err := ctx.Result(&msg); err != nil {
 			t.Fatal(err)
@@ -97,7 +95,6 @@ func TestExternalClient(t *testing.T) {
 
 		// send close request after getting our echo message back
 		ch.SendRequest("close", echoMsg{Message: cm}, func(ctx *neptulon.ResCtx) error {
-			defer wg.Done()
 			var msg echoMsg
 			if err := ctx.Result(&msg); err != nil {
 				t.Fatal(err)
@@ -111,6 +108,4 @@ func TestExternalClient(t *testing.T) {
 
 		return nil
 	})
-
-	wg.Wait()
 }

@@ -83,9 +83,8 @@ func (ch *ConnHelper) SendRequest(method string, params interface{}, resHandler 
 // CloseWait closes a connection.
 // Waits till all the goroutines handling messages quit.
 func (ch *ConnHelper) CloseWait() {
+	ch.resWG.Wait()
 	if err := ch.Conn.Close(); err != nil {
 		ch.testing.Fatal("Failed to close connection:", err)
 	}
-
-	ch.resWG.Wait()
 }
