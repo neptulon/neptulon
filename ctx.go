@@ -59,7 +59,7 @@ func (ctx *ReqCtx) Next() error {
 		return ctx.Conn.sendResponse(ctx.ID, ctx.Res, ctx.Err)
 	}
 
-	return nil
+	return fmt.Errorf("conn: no response provided for incoming request: %v: %v", ctx.Method, ctx.ID)
 }
 
 // ResCtx is the response context.
