@@ -53,6 +53,8 @@ func TestEchoWithoutTestHelpers(t *testing.T) {
 	if err := ws.Close(); err != nil {
 		t.Fatal(err)
 	}
+
+	time.Sleep(time.Millisecond * 10)
 }
 
 func TestEcho(t *testing.T) {
