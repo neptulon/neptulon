@@ -17,6 +17,6 @@ func Logger(ctx *neptulon.ReqCtx) error {
 		return err
 	}
 
-	log.Printf("logger: in: \"%v\", out: \"%v\"", v, ctx.Res)
+	log.Printf("logger: %v: %v, in: \"%v\", out: \"%v\"", ctx.ID, ctx.Method, v, ctx.Res)
 	return nil
 }
