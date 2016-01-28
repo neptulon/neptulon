@@ -116,6 +116,11 @@ func (c *Conn) Close() error {
 	return c.ws.Close()
 }
 
+// Wait waits for all message/connection handler goroutines to exit.
+func (c *Conn) Wait() {
+	c.wg.Wait()
+}
+
 // SendResponse sends a JSON-RPC response message through the connection.
 func (c *Conn) sendResponse(id string, result interface{}, err *ResError) error {
 	return c.send(response{ID: id, Result: result, Error: err})

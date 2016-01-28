@@ -2,7 +2,6 @@ package test
 
 import (
 	"testing"
-	"time"
 
 	"golang.org/x/net/websocket"
 
@@ -26,7 +25,6 @@ var (
 func TestEchoWithoutTestHelpers(t *testing.T) {
 	s := neptulon.NewServer("127.0.0.1:3001")
 	go s.Start()
-	time.Sleep(time.Millisecond * 10)
 	defer s.Close()
 
 	s.Middleware(func(ctx *neptulon.ReqCtx) error {
@@ -53,7 +51,6 @@ func TestEchoWithoutTestHelpers(t *testing.T) {
 	if err := ws.Close(); err != nil {
 		t.Fatal(err)
 	}
-	time.Sleep(time.Millisecond * 10)
 }
 
 func TestEcho(t *testing.T) {

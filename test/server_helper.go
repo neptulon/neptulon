@@ -98,5 +98,4 @@ func (sh *ServerHelper) CloseWait() {
 	}
 
 	sh.serverWG.Wait()
-	time.Sleep(time.Millisecond * 5)
 }
