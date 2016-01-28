@@ -7,6 +7,7 @@ import (
 	"net"
 	"runtime"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/neptulon/cmap"
@@ -17,16 +18,15 @@ import (
 
 // Conn is a client connection.
 type Conn struct {
-	ID             string
-	Session        *cmap.CMap
-	middleware     []func(ctx *ReqCtx) error
-	resRoutes      *cmap.CMap // message ID (string) -> handler func(ctx *ResCtx) error : expected responses for requests that we've sent
-	ws             *websocket.Conn
-	wg             sync.WaitGroup
-	deadline       time.Duration
-	isClientConn   bool
-	connectedMutex sync.RWMutex
-	connected      bool
+	ID           string
+	Session      *cmap.CMap
+	middleware   []func(ctx *ReqCtx) error
+	resRoutes    *cmap.CMap // message ID (string) -> handler func(ctx *ResCtx) error : expected responses for requests that we've sent
+	ws           *websocket.Conn
+	wg           sync.WaitGroup
+	deadline     time.Duration
+	isClientConn bool
+	connected    atomic.Value
 }
 
 // NewConn creates a new Conn object.
@@ -63,9 +63,7 @@ func (c *Conn) Connect(addr string) error {
 	}
 
 	c.ws = ws
-	c.connectedMutex.Lock()
-	c.connected = true
-	c.connectedMutex.Unlock()
+	c.connected.Store(true)
 	c.isClientConn = true
 	c.wg.Add(1)
 	go func() {
@@ -110,9 +108,7 @@ func (c *Conn) SendRequestArr(method string, resHandler func(res *ResCtx) error,
 
 // Close closes the connection.
 func (c *Conn) Close() error {
-	c.connectedMutex.Lock()
-	c.connected = false
-	c.connectedMutex.Unlock()
+	c.connected.Store(false)
 	return c.ws.Close()
 }
 
@@ -128,10 +124,7 @@ func (c *Conn) sendResponse(id string, result interface{}, err *ResError) error 
 
 // Send sends the given message through the connection.
 func (c *Conn) send(msg interface{}) error {
-	c.connectedMutex.RLock()
-	ct := c.connected
-	c.connectedMutex.RUnlock()
-	if !ct {
+	if !c.connected.Load().(bool) {
 		return errors.New("use of closed connection")
 	}
 
@@ -144,10 +137,7 @@ func (c *Conn) send(msg interface{}) error {
 
 // Receive receives message from the connection.
 func (c *Conn) receive(msg *message) error {
-	c.connectedMutex.RLock()
-	ct := c.connected
-	c.connectedMutex.RUnlock()
-	if !ct {
+	if !c.connected.Load().(bool) {
 		return errors.New("use of closed connection")
 	}
 
@@ -162,9 +152,7 @@ func (c *Conn) receive(msg *message) error {
 // This function blocks and does not return until the connection is closed by another goroutine.
 func (c *Conn) useConn(ws *websocket.Conn) {
 	c.ws = ws
-	c.connectedMutex.Lock()
-	c.connected = true
-	c.connectedMutex.Unlock()
+	c.connected.Store(true)
 	c.startReceive()
 }
 
@@ -177,10 +165,7 @@ func (c *Conn) startReceive() {
 		err := c.receive(&m)
 		if err != nil {
 			// if we closed the connection
-			c.connectedMutex.RLock()
-			ct := c.connected
-			c.connectedMutex.RUnlock()
-			if !ct {
+			if !c.connected.Load().(bool) {
 				log.Printf("conn: closed %v: %v", c.ID, c.RemoteAddr())
 				break
 			}
