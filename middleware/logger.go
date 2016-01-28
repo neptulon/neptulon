@@ -1,13 +1,22 @@
 package middleware
 
-import "github.com/neptulon/neptulon"
+import (
+	"log"
+
+	"github.com/neptulon/neptulon"
+)
 
 // Logger is an incoming/outgoing message logger.
-func Logger(ctx *neptulon.ReqCtx) {
-	// todo: evaluate options for minimal performance impact
-}
+func Logger(ctx *neptulon.ReqCtx) error {
+	var v interface{}
+	if err := ctx.Params(&v); err != nil {
+		return err
+	}
 
-// Perf is a performance logger for logging request/response times.
-func Perf(ctx *neptulon.ReqCtx) {
-	// todo: this chould an extensible Perf package also..
+	if err := ctx.Next(); err != nil {
+		return err
+	}
+
+	log.Printf("logger: %v: %v, in: \"%v\", out: \"%v\"", ctx.ID, ctx.Method, v, ctx.Res)
+	return nil
 }

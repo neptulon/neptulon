@@ -1,9 +1,13 @@
 package neptulon
 
 import (
+	"errors"
 	"io"
 	"log"
 	"net"
+	"runtime"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/neptulon/cmap"
@@ -14,13 +18,15 @@ import (
 
 // Conn is a client connection.
 type Conn struct {
-	ID         string
-	Session    *cmap.CMap
-	middleware []func(ctx *ReqCtx) error
-	resRoutes  *cmap.CMap // message ID (string) -> handler func(ctx *ResCtx) error : expected responses for requests that we've sent
-	ws         *websocket.Conn
-	deadline   time.Duration
-	closed     bool
+	ID           string
+	Session      *cmap.CMap
+	middleware   []func(ctx *ReqCtx) error
+	resRoutes    *cmap.CMap // message ID (string) -> handler func(ctx *ResCtx) error : expected responses for requests that we've sent
+	ws           *websocket.Conn
+	wg           sync.WaitGroup
+	deadline     time.Duration
+	isClientConn bool
+	connected    atomic.Value
 }
 
 // NewConn creates a new Conn object.
@@ -57,13 +63,23 @@ func (c *Conn) Connect(addr string) error {
 	}
 
 	c.ws = ws
-	go c.startReceive()
+	c.connected.Store(true)
+	c.isClientConn = true
+	c.wg.Add(1)
+	go func() {
+		defer recoverAndLog(c, &c.wg)
+		c.startReceive()
+	}()
 	time.Sleep(time.Millisecond) // give receive goroutine a few cycles to start
 	return nil
 }
 
 // RemoteAddr returns the remote network address.
 func (c *Conn) RemoteAddr() net.Addr {
+	if c.ws == nil {
+		return nil
+	}
+
 	return c.ws.RemoteAddr()
 }
 
@@ -92,8 +108,13 @@ func (c *Conn) SendRequestArr(method string, resHandler func(res *ResCtx) error,
 
 // Close closes the connection.
 func (c *Conn) Close() error {
-	c.closed = true
+	c.connected.Store(false)
 	return c.ws.Close()
+}
+
+// Wait waits for all message/connection handler goroutines to exit.
+func (c *Conn) Wait() {
+	c.wg.Wait()
 }
 
 // SendResponse sends a JSON-RPC response message through the connection.
@@ -103,6 +124,10 @@ func (c *Conn) sendResponse(id string, result interface{}, err *ResError) error 
 
 // Send sends the given message through the connection.
 func (c *Conn) send(msg interface{}) error {
+	if !c.connected.Load().(bool) {
+		return errors.New("use of closed connection")
+	}
+
 	if err := c.ws.SetWriteDeadline(time.Now().Add(c.deadline)); err != nil {
 		return err
 	}
@@ -112,6 +137,10 @@ func (c *Conn) send(msg interface{}) error {
 
 // Receive receives message from the connection.
 func (c *Conn) receive(msg *message) error {
+	if !c.connected.Load().(bool) {
+		return errors.New("use of closed connection")
+	}
+
 	if err := c.ws.SetReadDeadline(time.Now().Add(c.deadline)); err != nil {
 		return err
 	}
@@ -123,61 +152,79 @@ func (c *Conn) receive(msg *message) error {
 // This function blocks and does not return until the connection is closed by another goroutine.
 func (c *Conn) useConn(ws *websocket.Conn) {
 	c.ws = ws
+	c.connected.Store(true)
 	c.startReceive()
 }
 
 // startReceive starts receiving messages. This method blocks and does not return until the connection is closed.
 func (c *Conn) startReceive() {
-	// append the last middleware to request stack, which will write the response to connection, if any
-	c.middleware = append(c.middleware, func(ctx *ReqCtx) error {
-		if ctx.Res != nil || ctx.Err != nil {
-			return ctx.Conn.sendResponse(ctx.ID, ctx.Res, ctx.Err)
-		}
-
-		return nil
-	})
+	defer c.Close()
 
 	for {
 		var m message
 		err := c.receive(&m)
 		if err != nil {
+			// if we closed the connection
+			if !c.connected.Load().(bool) {
+				log.Printf("conn: closed %v: %v", c.ID, c.RemoteAddr())
+				break
+			}
+
 			// if peer closed the connection
 			if err == io.EOF {
-				log.Printf("Peer disconnected. Conn ID: %v, Remote Addr: %v\n", c.ID, c.RemoteAddr())
+				log.Printf("conn: peer disconnected %v: %v", c.ID, c.RemoteAddr())
 				break
 			}
 
-			// if we closed the connection
-			if c.closed {
-				log.Printf("Connection closed. Conn ID: %v, Remote Addr: %v\n", c.ID, c.RemoteAddr())
-				break
-			}
-
-			log.Println("Error while receiving message:", err)
+			log.Printf("conn: error while receiving message: %v", err)
 			break
 		}
 
 		// if the message is a request
 		if m.Method != "" {
-			if err := newReqCtx(c, m.ID, m.Method, m.Params, c.middleware).Next(); err != nil {
-				log.Println("Error while handling request:", err)
-				break
-			}
+			c.wg.Add(1)
+			go func() {
+				defer recoverAndLog(c, &c.wg)
+				if err := newReqCtx(c, m.ID, m.Method, m.Params, c.middleware).Next(); err != nil {
+					log.Printf("conn: error while handling request: %v", err)
+					c.Close()
+				}
+			}()
 
 			continue
 		}
 
-		// if the message is a response
-		if resHandler, ok := c.resRoutes.GetOk(m.ID); ok {
-			err := resHandler.(func(ctx *ResCtx) error)(newResCtx(c, m.ID, m.Result, m.Error))
-			c.resRoutes.Delete(m.ID)
-			if err != nil {
-				log.Println("Error while handling response:", err)
-				break
-			}
-		} else {
-			log.Println("Error while handling response: got response to a request with unknown ID:", m.ID)
+		// if the message is not a JSON-RPC message
+		if m.ID == "" || (m.Result == nil && m.Error == nil) {
+			log.Printf("conn: received an unknown message %v: %v, %v", c.ID, c.RemoteAddr(), m)
 			break
 		}
+
+		// if the message is a response
+		if resHandler, ok := c.resRoutes.GetOk(m.ID); ok {
+			c.wg.Add(1)
+			go func() {
+				defer recoverAndLog(c, &c.wg)
+				err := resHandler.(func(ctx *ResCtx) error)(newResCtx(c, m.ID, m.Result, m.Error))
+				c.resRoutes.Delete(m.ID)
+				if err != nil {
+					log.Printf("conn: error while handling response: %v", err)
+					c.Close()
+				}
+			}()
+		} else {
+			log.Printf("conn: error while handling response: got response to a request with unknown ID: %v", m.ID)
+			break
+		}
+	}
+}
+
+func recoverAndLog(c *Conn, wg *sync.WaitGroup) {
+	defer wg.Done()
+	if err := recover(); err != nil {
+		const size = 64 << 10
+		buf := make([]byte, size)
+		buf = buf[:runtime.Stack(buf, false)]
+		log.Printf("conn: panic handling response %v: %v\n%s", c.RemoteAddr(), err, buf)
 	}
 }

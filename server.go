@@ -5,12 +5,14 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"log"
 	"net"
 	"net/http"
 	"net/url"
 	"sync"
+	"sync/atomic"
 
 	"github.com/neptulon/cmap"
 
@@ -19,20 +21,22 @@ import (
 
 // Server is a Neptulon server.
 type Server struct {
-	addr       string
-	conns      *cmap.CMap // conn ID -> *Conn
-	middleware []func(ctx *ReqCtx) error
-	listener   net.Listener
-	wsConfig   websocket.Config
-	wg         sync.WaitGroup
-	closed     bool
+	addr           string
+	conns          *cmap.CMap // conn ID -> *Conn
+	middleware     []func(ctx *ReqCtx) error
+	listener       net.Listener
+	wsConfig       websocket.Config
+	wg             sync.WaitGroup
+	running        atomic.Value
+	disconnHandler func(c *Conn)
 }
 
 // NewServer creates a new Neptulon server.
 func NewServer(addr string) *Server {
 	return &Server{
-		addr:  addr,
-		conns: cmap.New(),
+		addr:           addr,
+		conns:          cmap.New(),
+		disconnHandler: func(c *Conn) {},
 	}
 }
 
@@ -71,14 +75,19 @@ func (s *Server) Middleware(middleware ...func(ctx *ReqCtx) error) {
 	s.middleware = append(s.middleware, middleware...)
 }
 
+// DisconnHandler registers a function to handle client disconnection events.
+func (s *Server) DisconnHandler(handler func(c *Conn)) {
+	s.disconnHandler = handler
+}
+
 // Start the Neptulon server. This function blocks until server is closed.
 func (s *Server) Start() error {
 	mux := http.NewServeMux()
 	mux.Handle("/", websocket.Server{
 		Config:  s.wsConfig,
-		Handler: s.wsHandler,
+		Handler: s.wsConnHandler,
 		Handshake: func(config *websocket.Config, req *http.Request) error {
-			s.wg.Add(1)                                  // todo: this needs to happen inside the gorotune executing the Start method and not the request goroutine or we'll miss some connections
+			s.wg.Add(1)                                  // todo: this needs to happen inside the gorotune executing the Start method and not the request goroutine or we'll miss some edge connections
 			config.Origin, _ = url.Parse(req.RemoteAddr) // we're interested in remote address and not origin header text
 			return nil
 		},
@@ -90,9 +99,10 @@ func (s *Server) Start() error {
 	}
 	s.listener = l
 
-	log.Println("Server started:", s.addr)
+	log.Printf("server: started %v", s.addr)
+	s.running.Store(true)
 	err = http.Serve(l, mux)
-	if s.closed {
+	if !s.running.Load().(bool) {
 		return nil
 	}
 	return err
@@ -101,6 +111,10 @@ func (s *Server) Start() error {
 // SendRequest sends a JSON-RPC request through the connection denoted by the connection ID with an auto generated request ID.
 // resHandler is called when a response is returned.
 func (s *Server) SendRequest(connID string, method string, params interface{}, resHandler func(ctx *ResCtx) error) (reqID string, err error) {
+	if !s.running.Load().(bool) {
+		return "", errors.New("use of closed server")
+	}
+
 	if conn, ok := s.conns.GetOk(connID); ok {
 		return conn.(*Conn).SendRequest(method, params, resHandler)
 	}
@@ -116,7 +130,7 @@ func (s *Server) SendRequestArr(connID string, method string, resHandler func(ct
 
 // Close closes the network listener and the active connections.
 func (s *Server) Close() error {
-	s.closed = true
+	s.running.Store(false)
 	err := s.listener.Close()
 
 	// close all active connections discarding any read/writes that is going on currently
@@ -129,22 +143,31 @@ func (s *Server) Close() error {
 	}
 
 	s.wg.Wait()
-	log.Println("Server stopped:", s.addr)
+	log.Printf("server: stopped %v", s.addr)
 	return nil
 }
 
+// Wait waits for all message/connection handler goroutines in all connections to exit.
+func (s *Server) Wait() {
+	s.conns.Range(func(c interface{}) {
+		c.(*Conn).Wait()
+	})
+}
+
 // wsHandler handles incoming websocket connections.
-func (s *Server) wsHandler(ws *websocket.Conn) {
-	defer s.wg.Done()
+func (s *Server) wsConnHandler(ws *websocket.Conn) {
 	c, err := NewConn()
 	if err != nil {
-		log.Println("Error while accepting connection:", err)
+		log.Printf("server: error while accepting connection: %v", err)
 		return
 	}
+	defer recoverAndLog(c, &s.wg)
 	c.Middleware(s.middleware...)
-	log.Printf("Client connected: Conn ID: %v, Remote Addr: %v\n", c.ID, ws.RemoteAddr())
+
+	log.Printf("server: client connected %v: %v", c.ID, ws.RemoteAddr())
 
 	s.conns.Set(c.ID, c)
 	c.useConn(ws)
 	s.conns.Delete(c.ID)
+	s.disconnHandler(c)
 }
