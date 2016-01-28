@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/url"
 	"sync"
+	"sync/atomic"
 
 	"github.com/neptulon/cmap"
 
@@ -26,7 +27,7 @@ type Server struct {
 	listener       net.Listener
 	wsConfig       websocket.Config
 	wg             sync.WaitGroup
-	running        bool
+	running        atomic.Value
 	disconnHandler func(c *Conn)
 }
 
@@ -99,9 +100,9 @@ func (s *Server) Start() error {
 	s.listener = l
 
 	log.Printf("server: started %v", s.addr)
-	s.running = true
+	s.running.Store(true)
 	err = http.Serve(l, mux)
-	if !s.running {
+	if !s.running.Load().(bool) {
 		return nil
 	}
 	return err
@@ -110,7 +111,7 @@ func (s *Server) Start() error {
 // SendRequest sends a JSON-RPC request through the connection denoted by the connection ID with an auto generated request ID.
 // resHandler is called when a response is returned.
 func (s *Server) SendRequest(connID string, method string, params interface{}, resHandler func(ctx *ResCtx) error) (reqID string, err error) {
-	if !s.running {
+	if !s.running.Load().(bool) {
 		return "", errors.New("use of closed server")
 	}
 
@@ -129,7 +130,7 @@ func (s *Server) SendRequestArr(connID string, method string, resHandler func(ct
 
 // Close closes the network listener and the active connections.
 func (s *Server) Close() error {
-	s.running = false
+	s.running.Store(false)
 	err := s.listener.Close()
 
 	// close all active connections discarding any read/writes that is going on currently
