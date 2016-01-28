@@ -21,7 +21,7 @@ func TestExternalClient(t *testing.T) {
 	sh := NewServerHelper(t)
 	sh.Middleware(middleware.Logger)
 	var wg sync.WaitGroup
-	m := "Hello!"
+	m := "Hello from Neptulon server!"
 
 	// handle 'echo' requests via the 'echo middleware'
 	srout := middleware.NewRouter()
@@ -74,7 +74,6 @@ func TestExternalClient(t *testing.T) {
 	t.Log("Skipping external client integration test since -ext flag is not provided.")
 	ch := sh.GetConnHelper()
 	ch.Middleware(middleware.Logger)
-	cm := "Thanks for echoing! Over and out."
 
 	// handle 'echo' requests via the 'echo middleware'
 	crout := middleware.NewRouter()
@@ -83,24 +82,26 @@ func TestExternalClient(t *testing.T) {
 	defer ch.Connect().CloseWait()
 
 	// handle 'echo' request and send 'close' request upon echo response
-	ch.SendRequest("echo", echoMsg{Message: m}, func(ctx *neptulon.ResCtx) error {
+	mc := "Hello from Neptulon Go client!"
+	ch.SendRequest("echo", echoMsg{Message: mc}, func(ctx *neptulon.ResCtx) error {
 		var msg echoMsg
 		if err := ctx.Result(&msg); err != nil {
 			t.Fatal(err)
 		}
-		if msg.Message != m {
-			t.Fatalf("client: expected: %v got: %v", m, msg.Message)
+		if msg.Message != mc {
+			t.Fatalf("client: expected: %v got: %v", mc, msg.Message)
 		}
 		t.Log("client: server accepted and echoed 'echo' request message body")
 
 		// send close request after getting our echo message back
-		ch.SendRequest("close", echoMsg{Message: cm}, func(ctx *neptulon.ResCtx) error {
+		mb := "Thanks for echoing! Over and out."
+		ch.SendRequest("close", echoMsg{Message: mb}, func(ctx *neptulon.ResCtx) error {
 			var msg echoMsg
 			if err := ctx.Result(&msg); err != nil {
 				t.Fatal(err)
 			}
-			if msg.Message != cm {
-				t.Fatalf("client: expected: %v got: %v", cm, msg.Message)
+			if msg.Message != mb {
+				t.Fatalf("client: expected: %v got: %v", mb, msg.Message)
 			}
 			t.Log("client: server accepted and echoed 'close' request message body. bye!")
 			return nil
