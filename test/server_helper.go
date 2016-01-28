@@ -28,8 +28,8 @@ type ServerHelper struct {
 	ServerKey []byte
 	Address string
 
-	testing  *testing.T
-	serverWG sync.WaitGroup // server instance goroutine wait group
+	testing    *testing.T
+	listenerWG sync.WaitGroup // server listener instance goroutine wait group
 }
 
 // NewServerHelper creates a new server helper object.
@@ -73,9 +73,9 @@ func (sh *ServerHelper) Middleware(middleware ...func(ctx *neptulon.ReqCtx) erro
 // Start starts the server.
 func (sh *ServerHelper) Start() *ServerHelper {
 	// start the server immediately
-	sh.serverWG.Add(1)
+	sh.listenerWG.Add(1)
 	go func() {
-		defer sh.serverWG.Done()
+		defer sh.listenerWG.Done()
 		if err := sh.Server.Start(); err != nil {
 			sh.testing.Fatal("Failed to accept connection(s):", err)
 		}
@@ -97,5 +97,6 @@ func (sh *ServerHelper) CloseWait() {
 		sh.testing.Fatal("Failed to stop the server:", err)
 	}
 
-	sh.serverWG.Wait()
+	sh.listenerWG.Wait()
+	sh.Server.Wait()
 }

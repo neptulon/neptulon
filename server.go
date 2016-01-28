@@ -147,6 +147,13 @@ func (s *Server) Close() error {
 	return nil
 }
 
+// Wait waits for all message/connection handler goroutines in all connections to exit.
+func (s *Server) Wait() {
+	s.conns.Range(func(c interface{}) {
+		c.(*Conn).Wait()
+	})
+}
+
 // wsHandler handles incoming websocket connections.
 func (s *Server) wsConnHandler(ws *websocket.Conn) {
 	c, err := NewConn()
