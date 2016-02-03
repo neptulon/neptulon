@@ -30,9 +30,8 @@ func NewConnHelper(t *testing.T, addr string) *ConnHelper {
 		t.Fatal("Failed to create connection:", err)
 	}
 
-	ch := &ConnHelper{Conn: conn, testing: t, serverAddr: addr}
-	ch.Conn.SetDeadline(10)
-	return ch
+	conn.SetDeadline(10)
+	return &ConnHelper{Conn: conn, testing: t, serverAddr: addr}
 }
 
 // Connect connects to a server.
