@@ -18,8 +18,8 @@ import (
 
 // Conn is a client connection.
 type Conn struct {
-	ID           string
-	Session      *cmap.CMap
+	ID           string     // Randomly generated unique client connection ID.
+	Session      *cmap.CMap // Thread-safe data store for storing arbitrary data for this connection session.
 	middleware   []func(ctx *ReqCtx) error
 	resRoutes    *cmap.CMap // message ID (string) -> handler func(ctx *ResCtx) error : expected responses for requests that we've sent
 	ws           *websocket.Conn
@@ -51,7 +51,14 @@ func (c *Conn) SetDeadline(seconds int) {
 }
 
 // Middleware registers middleware to handle incoming request messages.
-func (c *Conn) Middleware(middleware ...func(ctx *ReqCtx) error) {
+func (c *Conn) Middleware(middleware ...Middleware) {
+	for _, m := range middleware {
+		c.MiddlewareFunc(m.Middleware)
+	}
+}
+
+// MiddlewareFunc registers middleware function to handle incoming request messages.
+func (c *Conn) MiddlewareFunc(middleware ...func(ctx *ReqCtx) error) {
 	c.middleware = append(c.middleware, middleware...)
 }
 
