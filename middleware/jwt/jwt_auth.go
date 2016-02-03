@@ -16,8 +16,10 @@ type token struct {
 // If successful, token context will be store with the key "userid" in session.
 // If unsuccessful, connection will be closed right away.
 func HMAC(password string) func(ctx *neptulon.ReqCtx) error {
+	var authenticated bool
+
 	return func(ctx *neptulon.ReqCtx) error {
-		if _, ok := ctx.Session.GetOk("userid"); ok {
+		if authenticated {
 			return ctx.Next()
 		}
 
@@ -40,6 +42,7 @@ func HMAC(password string) func(ctx *neptulon.ReqCtx) error {
 			return err
 		}
 
+		authenticated = true
 		userID := jt.Claims["userid"].(string)
 		ctx.Session.Set("userid", userID)
 		log.Printf("middleware: jwt: client authenticated. user: %v, conn: %v, ip: %v", userID, ctx.Conn.ID, ctx.Conn.RemoteAddr())
