@@ -65,11 +65,6 @@ func (sh *ServerHelper) UseTLS() *ServerHelper {
 	return sh
 }
 
-// Middleware registers middleware to handle incoming request messages.
-func (sh *ServerHelper) Middleware(middleware ...func(ctx *neptulon.ReqCtx) error) {
-	sh.Server.Middleware(middleware...)
-}
-
 // Start starts the server.
 func (sh *ServerHelper) Start() *ServerHelper {
 	// start the server immediately

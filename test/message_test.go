@@ -29,7 +29,7 @@ func TestEchoWithoutTestHelpers(t *testing.T) {
 	time.Sleep(time.Millisecond * 10)
 	defer s.Close()
 
-	s.Middleware(func(ctx *neptulon.ReqCtx) error {
+	s.MiddlewareFunc(func(ctx *neptulon.ReqCtx) error {
 		t.Log("Request received:", ctx.Method)
 		ctx.Res = "response-wow!"
 		return ctx.Next()
@@ -60,13 +60,13 @@ func TestEchoWithoutTestHelpers(t *testing.T) {
 func TestEcho(t *testing.T) {
 	sh := NewServerHelper(t)
 	rout := middleware.NewRouter()
-	sh.Middleware(middleware.Logger)
-	sh.Middleware(rout.Middleware)
+	sh.Server.MiddlewareFunc(middleware.Logger)
+	sh.Server.Middleware(rout)
 	rout.Request("echo", middleware.Echo)
 	defer sh.Start().CloseWait()
 
 	ch := sh.GetConnHelper()
-	ch.Middleware(middleware.Logger)
+	ch.Conn.MiddlewareFunc(middleware.Logger)
 	defer ch.Connect().CloseWait()
 
 	m := "Hello!"
