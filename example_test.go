@@ -19,7 +19,7 @@ func Example() {
 
 	// start the server and echo incoming messages back to the sender
 	s := neptulon.NewServer("127.0.0.1:3000")
-	s.Middleware(func(ctx *neptulon.ReqCtx) error {
+	s.MiddlewareFunc(func(ctx *neptulon.ReqCtx) error {
 		var msg SampleMsg
 		if err := ctx.Params(&msg); err != nil {
 			return err

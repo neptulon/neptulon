@@ -35,11 +35,6 @@ func NewConnHelper(t *testing.T, addr string) *ConnHelper {
 	return ch
 }
 
-// Middleware registers middleware to handle incoming request messages.
-func (ch *ConnHelper) Middleware(middleware ...func(ctx *neptulon.ReqCtx) error) {
-	ch.Conn.Middleware(middleware...)
-}
-
 // Connect connects to a server.
 func (ch *ConnHelper) Connect() *ConnHelper {
 	// retry connect in case we're operating on a very slow machine

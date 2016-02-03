@@ -71,7 +71,14 @@ func (s *Server) UseTLS(cert, privKey, clientCACert []byte) error {
 }
 
 // Middleware registers middleware to handle incoming request messages.
-func (s *Server) Middleware(middleware ...func(ctx *ReqCtx) error) {
+func (s *Server) Middleware(middleware ...Middleware) {
+	for _, m := range middleware {
+		s.MiddlewareFunc(m.Middleware)
+	}
+}
+
+// MiddlewareFunc registers middleware function to handle incoming request messages.
+func (s *Server) MiddlewareFunc(middleware ...func(ctx *ReqCtx) error) {
 	s.middleware = append(s.middleware, middleware...)
 }
 
@@ -162,7 +169,7 @@ func (s *Server) wsConnHandler(ws *websocket.Conn) {
 		return
 	}
 	defer recoverAndLog(c, &s.wg)
-	c.Middleware(s.middleware...)
+	c.MiddlewareFunc(s.middleware...)
 
 	log.Printf("server: client connected %v: %v", c.ID, ws.RemoteAddr())
 

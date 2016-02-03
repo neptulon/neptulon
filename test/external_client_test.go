@@ -19,13 +19,13 @@ var ext = flag.Bool("ext", false, "Run external client test case.")
 // * Repeat ad infinitum, until {"method":"close", "params":"{"message": "..."}"} is received. Close message body is logged.
 func TestExternalClient(t *testing.T) {
 	sh := NewServerHelper(t)
-	sh.Middleware(middleware.Logger)
+	sh.Server.MiddlewareFunc(middleware.Logger)
 	var wg sync.WaitGroup
 	m := "Hello from Neptulon server!"
 
 	// handle 'echo' requests via the 'echo middleware'
 	srout := middleware.NewRouter()
-	sh.Middleware(srout.Middleware)
+	sh.Server.Middleware(srout)
 	srout.Request("echo", func(ctx *neptulon.ReqCtx) error {
 		// send 'echo' request to client upon connection (blocks test if no response is received)
 		wg.Add(1)
@@ -73,11 +73,11 @@ func TestExternalClient(t *testing.T) {
 	// use internal conn implementation instead to test the test case itself
 	t.Log("Skipping external client integration test since -ext flag is not provided.")
 	ch := sh.GetConnHelper()
-	ch.Middleware(middleware.Logger)
+	ch.Conn.MiddlewareFunc(middleware.Logger)
 
 	// handle 'echo' requests via the 'echo middleware'
 	crout := middleware.NewRouter()
-	ch.Conn.Middleware(crout.Middleware)
+	ch.Conn.Middleware(crout)
 	crout.Request("echo", middleware.Echo)
 	defer ch.Connect().CloseWait()
 
