@@ -9,7 +9,7 @@ import (
 )
 
 type token struct {
-	Token string `json:"message"`
+	Token string `json:"token"`
 }
 
 // HMAC is JSON Web Token authentication using HMAC.
