@@ -16,6 +16,7 @@ type token struct {
 // If successful, token context will be store with the key "userid" in session.
 // If unsuccessful, connection will be closed right away.
 func HMAC(password string) func(ctx *neptulon.ReqCtx) error {
+	pass := []byte(password)
 	var authenticated bool
 
 	return func(ctx *neptulon.ReqCtx) error {
@@ -33,7 +34,7 @@ func HMAC(password string) func(ctx *neptulon.ReqCtx) error {
 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 				return nil, fmt.Errorf("jwt-middleware: unexpected signing method: %v", token.Header["alg"])
 			}
-			return password, nil
+			return pass, nil
 		})
 
 		if err != nil || !jt.Valid {
