@@ -31,15 +31,14 @@ func HMAC(password string) func(ctx *neptulon.ReqCtx) error {
 
 		jt, err := jwt.Parse(t.Token, func(token *jwt.Token) (interface{}, error) {
 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-				return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
+				return nil, fmt.Errorf("jwt-middleware: unexpected signing method: %v", token.Header["alg"])
 			}
 			return password, nil
 		})
 
 		if err != nil || !jt.Valid {
-			log.Printf("middleware: jwt: invalid JWT authentication attempt: %v", ctx.Conn.RemoteAddr())
 			ctx.Conn.Close()
-			return err
+			return fmt.Errorf("middleware: jwt: invalid JWT authentication attempt: %v: %v: %v", err, ctx.Conn.RemoteAddr(), t.Token)
 		}
 
 		authenticated = true
