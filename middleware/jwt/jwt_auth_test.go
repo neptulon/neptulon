@@ -1,6 +1,7 @@
 package jwt
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -17,8 +18,23 @@ type testMsg struct {
 	Token   string `json:"token"`
 }
 
-func TestTokenGen(t *testing.T) {
-	// token := genToken(t)
+func TestJWTLib(t *testing.T) {
+	tokenStr := genToken(t)
+
+	jt, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return []byte(pass), nil
+	})
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !jt.Valid {
+		t.Fatal("somehow generated invalid token with the library itself!")
+	}
 }
 
 func TestMiddleware(t *testing.T) {
