@@ -44,7 +44,7 @@ func HMAC(password string) func(ctx *neptulon.ReqCtx) error {
 
 		authenticated = true
 		userID := jt.Claims["userid"].(string)
-		ctx.Session.Set("userid", userID)
+		ctx.Conn.Session.Set("userid", userID)
 		log.Printf("middleware: jwt: client authenticated. user: %v, conn: %v, ip: %v", userID, ctx.Conn.ID, ctx.Conn.RemoteAddr())
 		return ctx.Next()
 	}
