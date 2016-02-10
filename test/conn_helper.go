@@ -2,6 +2,7 @@ package test
 
 import (
 	"net"
+	"os"
 	"sync"
 	"testing"
 	"time"
@@ -83,4 +84,7 @@ func (ch *ConnHelper) CloseWait() {
 	}
 	ch.Conn.Wait()
 	time.Sleep(time.Millisecond * 5)
+	if os.Getenv("TRAVIS") != "" || os.Getenv("CI") == "" {
+		time.Sleep(time.Millisecond * 50)
+	}
 }

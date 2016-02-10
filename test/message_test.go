@@ -26,7 +26,7 @@ var (
 func TestEchoWithoutTestHelpers(t *testing.T) {
 	s := neptulon.NewServer("127.0.0.1:3001")
 	go s.ListenAndServe()
-	time.Sleep(time.Millisecond * 10)
+	time.Sleep(time.Millisecond * 30)
 	defer s.Close()
 
 	s.MiddlewareFunc(func(ctx *neptulon.ReqCtx) error {
@@ -54,7 +54,7 @@ func TestEchoWithoutTestHelpers(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	time.Sleep(time.Millisecond * 10)
+	time.Sleep(time.Millisecond * 30)
 }
 
 func TestEcho(t *testing.T) {

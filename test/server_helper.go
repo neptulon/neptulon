@@ -1,6 +1,7 @@
 package test
 
 import (
+	"os"
 	"sync"
 	"testing"
 	"time"
@@ -95,4 +96,7 @@ func (sh *ServerHelper) CloseWait() {
 	sh.listenerWG.Wait()
 	sh.Server.Wait()
 	time.Sleep(time.Millisecond * 5)
+	if os.Getenv("TRAVIS") != "" || os.Getenv("CI") == "" {
+		time.Sleep(time.Millisecond * 50)
+	}
 }
