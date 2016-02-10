@@ -65,13 +65,13 @@ func (sh *ServerHelper) UseTLS() *ServerHelper {
 	return sh
 }
 
-// Start starts the server.
-func (sh *ServerHelper) Start() *ServerHelper {
+// ListenAndServe starts the server.
+func (sh *ServerHelper) ListenAndServe() *ServerHelper {
 	// start the server immediately
 	sh.listenerWG.Add(1)
 	go func() {
 		defer sh.listenerWG.Done()
-		if err := sh.Server.Start(); err != nil {
+		if err := sh.Server.ListenAndServe(); err != nil {
 			sh.testing.Fatal("Failed to accept connection(s):", err)
 		}
 	}()

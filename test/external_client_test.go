@@ -62,7 +62,7 @@ func TestExternalClient(t *testing.T) {
 		return err
 	})
 
-	defer sh.Start().CloseWait()
+	defer sh.ListenAndServe().CloseWait()
 
 	if *ext {
 		t.Log("Starter server waiting for external client integration test since.")

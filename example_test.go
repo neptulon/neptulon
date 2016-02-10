@@ -27,7 +27,7 @@ func Example() {
 		ctx.Res = msg
 		return ctx.Next()
 	})
-	go s.Start()
+	go s.ListenAndServe()
 	time.Sleep(time.Millisecond * 50) // let server goroutine to warm up
 	defer s.Close()
 

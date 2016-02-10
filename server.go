@@ -87,8 +87,8 @@ func (s *Server) DisconnHandler(handler func(c *Conn)) {
 	s.disconnHandler = handler
 }
 
-// Start the Neptulon server. This function blocks until server is closed.
-func (s *Server) Start() error {
+// ListenAndServe starts the Neptulon server. This function blocks until server is closed.
+func (s *Server) ListenAndServe() error {
 	mux := http.NewServeMux()
 	mux.Handle("/", websocket.Server{
 		Config:  s.wsConfig,

@@ -25,7 +25,7 @@ var (
 
 func TestEchoWithoutTestHelpers(t *testing.T) {
 	s := neptulon.NewServer("127.0.0.1:3001")
-	go s.Start()
+	go s.ListenAndServe()
 	time.Sleep(time.Millisecond * 10)
 	defer s.Close()
 
@@ -63,7 +63,7 @@ func TestEcho(t *testing.T) {
 	sh.Server.MiddlewareFunc(middleware.Logger)
 	sh.Server.Middleware(rout)
 	rout.Request("echo", middleware.Echo)
-	defer sh.Start().CloseWait()
+	defer sh.ListenAndServe().CloseWait()
 
 	ch := sh.GetConnHelper()
 	ch.Conn.MiddlewareFunc(middleware.Logger)
