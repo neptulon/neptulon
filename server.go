@@ -146,7 +146,7 @@ func (s *Server) Close() error {
 	})
 
 	if err != nil {
-		return fmt.Errorf("And error occured before or while stopping the server: %v", err)
+		return fmt.Errorf("an error occured before or while stopping the server: %v", err)
 	}
 
 	s.wg.Wait()

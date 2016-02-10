@@ -32,7 +32,7 @@ func HMAC(password string) func(ctx *neptulon.ReqCtx) error {
 
 		jt, err := jwt.Parse(t.Token, func(token *jwt.Token) (interface{}, error) {
 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-				return nil, fmt.Errorf("jwt-middleware: unexpected signing method: %v", token.Header["alg"])
+				return nil, fmt.Errorf("middleware: jwt: unexpected signing method: %v", token.Header["alg"])
 			}
 			return pass, nil
 		})
