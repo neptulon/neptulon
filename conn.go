@@ -116,7 +116,10 @@ func (c *Conn) SendRequestArr(method string, resHandler func(res *ResCtx) error,
 // Close closes the connection.
 func (c *Conn) Close() error {
 	c.connected.Store(false)
-	return c.ws.Close()
+	if c.ws != nil {
+		c.ws.Close()
+	}
+	return nil
 }
 
 // Wait waits for all message/connection handler goroutines to exit.
