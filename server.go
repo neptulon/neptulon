@@ -174,7 +174,8 @@ func (s *Server) wsConnHandler(ws *websocket.Conn) {
 	log.Printf("server: client connected %v: %v", c.ID, ws.RemoteAddr())
 
 	s.conns.Set(c.ID, c)
-	c.useConn(ws)
+	c.setConn(ws)
+	c.startReceive()
 	s.conns.Delete(c.ID)
 	s.disconnHandler(c)
 }
