@@ -64,6 +64,7 @@ func (c *Conn) MiddlewareFunc(middleware ...func(ctx *ReqCtx) error) {
 }
 
 // Connect connects to the given WebSocket server.
+// addr should be formatted as ws://host:port -or- wss://host:port (i.e. ws://127.0.0.1:3000 -or- wss://localhost:3000)
 func (c *Conn) Connect(addr string) error {
 	ws, err := websocket.Dial(addr, "", "http://localhost")
 	if err != nil {
