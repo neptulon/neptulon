@@ -20,7 +20,7 @@ func HMAC(password string) func(ctx *neptulon.ReqCtx) error {
 
 	return func(ctx *neptulon.ReqCtx) error {
 		if _, ok := ctx.Conn.Session.GetOk("userid"); ok {
-			return nil
+			return ctx.Next()
 		}
 
 		var t token
