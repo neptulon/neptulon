@@ -19,15 +19,16 @@ import (
 
 // Conn is a client connection.
 type Conn struct {
-	ID           string     // Randomly generated unique client connection ID.
-	Session      *cmap.CMap // Thread-safe data store for storing arbitrary data for this connection session.
-	middleware   []func(ctx *ReqCtx) error
-	resRoutes    *cmap.CMap // message ID (string) -> handler func(ctx *ResCtx) error : expected responses for requests that we've sent
-	ws           *websocket.Conn
-	wg           sync.WaitGroup
-	deadline     time.Duration
-	isClientConn bool
-	connected    atomic.Value
+	ID             string     // Randomly generated unique client connection ID.
+	Session        *cmap.CMap // Thread-safe data store for storing arbitrary data for this connection session.
+	middleware     []func(ctx *ReqCtx) error
+	resRoutes      *cmap.CMap // message ID (string) -> handler func(ctx *ResCtx) error : expected responses for requests that we've sent
+	ws             *websocket.Conn
+	wg             sync.WaitGroup
+	deadline       time.Duration
+	isClientConn   bool
+	connected      atomic.Value
+	disconnHandler func(c *Conn)
 }
 
 // NewConn creates a new Conn object.
@@ -38,10 +39,11 @@ func NewConn() (*Conn, error) {
 	}
 
 	return &Conn{
-		ID:        id,
-		Session:   cmap.New(),
-		resRoutes: cmap.New(),
-		deadline:  time.Second * time.Duration(300),
+		ID:             id,
+		Session:        cmap.New(),
+		resRoutes:      cmap.New(),
+		deadline:       time.Second * time.Duration(300),
+		disconnHandler: func(c *Conn) {},
 	}, nil
 }
 
@@ -61,6 +63,11 @@ func (c *Conn) Middleware(middleware ...Middleware) {
 // MiddlewareFunc registers middleware function to handle incoming request messages.
 func (c *Conn) MiddlewareFunc(middleware ...func(ctx *ReqCtx) error) {
 	c.middleware = append(c.middleware, middleware...)
+}
+
+// DisconnHandler registers a function to handle disconnection event.
+func (c *Conn) DisconnHandler(handler func(c *Conn)) {
+	c.disconnHandler = handler
 }
 
 // Connect connects to the given WebSocket server.
@@ -165,6 +172,7 @@ func (c *Conn) setConn(ws *websocket.Conn) error {
 
 // startReceive starts receiving messages. This method blocks and does not return until the connection is closed.
 func (c *Conn) startReceive() {
+	defer c.disconnHandler(c)
 	defer c.Close()
 
 	for {
