@@ -19,7 +19,7 @@ s.Middleware(func(ctx *neptulon.ReqCtx) error {
 	return ctx.Next()
 })
 
-s.Start()
+s.ListenAndServe()
 ```
 
 Following is a client connection to the above server. You can also use [WebSocket Test Page](http://www.websocket.org/echo.html) from your browser to connect to the server.
@@ -52,7 +52,7 @@ You can connect to your Neptulon server using any programming language that has 
 
 ## Users
 
-[Titan](https://github.com/nb-titan/titan) mobile messaging app server is written entirely using the Neptulon framework. You can visit its repo to see a complete use case of Neptulon framework.
+[Titan](https://github.com/titan-x/titan) mobile messaging app server is written entirely using the Neptulon framework. You can visit its repo to see a complete use case of Neptulon framework.
 
 ## Testing
 
