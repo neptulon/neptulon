@@ -38,7 +38,7 @@ func newReqCtx(conn *Conn, id, method string, params json.RawMessage, mw []func(
 func (ctx *ReqCtx) Params(v interface{}) error {
 	if ctx.params != nil {
 		if err := json.Unmarshal(ctx.params, v); err != nil {
-			return fmt.Errorf("cannot deserialize request params: %v", err)
+			return fmt.Errorf("ctx: cannot deserialize request params: %v", err)
 		}
 	}
 
@@ -59,7 +59,7 @@ func (ctx *ReqCtx) Next() error {
 		return ctx.Conn.sendResponse(ctx.ID, ctx.Res, ctx.Err)
 	}
 
-	return fmt.Errorf("no response provided for incoming request: %v: %v", ctx.Method, ctx.ID)
+	return fmt.Errorf("ctx: no response provided for incoming request: %v: %v", ctx.Method, ctx.ID)
 }
 
 // ResCtx is the response context.
@@ -85,7 +85,7 @@ func newResCtx(conn *Conn, id string, result json.RawMessage, err *resError) *Re
 func (ctx *ResCtx) Result(v interface{}) error {
 	if ctx.result != nil {
 		if err := json.Unmarshal(ctx.result, v); err != nil {
-			return fmt.Errorf("cannot deserialize response result: %v", err)
+			return fmt.Errorf("ctx: cannot deserialize response result: %v", err)
 		}
 	}
 
