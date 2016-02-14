@@ -172,8 +172,10 @@ func (c *Conn) setConn(ws *websocket.Conn) error {
 
 // startReceive starts receiving messages. This method blocks and does not return until the connection is closed.
 func (c *Conn) startReceive() {
-	defer c.disconnHandler(c)
-	defer c.Close()
+	defer func() {
+		c.Close()
+		c.disconnHandler(c)
+	}()
 
 	for {
 		var m message
