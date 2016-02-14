@@ -78,6 +78,9 @@ func (sh *ServerHelper) ListenAndServe() *ServerHelper {
 	}()
 
 	time.Sleep(time.Millisecond) // give Accept() enough CPU cycles to initiate
+	if os.Getenv("TRAVIS") != "" || os.Getenv("CI") == "" {
+		time.Sleep(time.Millisecond * 15)
+	}
 	return sh
 }
 

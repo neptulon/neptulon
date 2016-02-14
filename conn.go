@@ -2,6 +2,7 @@ package neptulon
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"net"
@@ -63,14 +64,16 @@ func (c *Conn) MiddlewareFunc(middleware ...func(ctx *ReqCtx) error) {
 }
 
 // Connect connects to the given WebSocket server.
+// addr should be formatted as ws://host:port -or- wss://host:port (i.e. ws://127.0.0.1:3000 -or- wss://localhost:3000)
 func (c *Conn) Connect(addr string) error {
 	ws, err := websocket.Dial(addr, "", "http://localhost")
 	if err != nil {
 		return err
 	}
+	if err := c.setConn(ws); err != nil {
+		return err
+	}
 
-	c.ws = ws
-	c.connected.Store(true)
 	c.isClientConn = true
 	c.wg.Add(1)
 	go func() {
@@ -116,7 +119,10 @@ func (c *Conn) SendRequestArr(method string, resHandler func(res *ResCtx) error,
 // Close closes the connection.
 func (c *Conn) Close() error {
 	c.connected.Store(false)
-	return c.ws.Close()
+	if c.ws != nil {
+		c.ws.Close()
+	}
+	return nil
 }
 
 // Wait waits for all message/connection handler goroutines to exit.
@@ -135,10 +141,6 @@ func (c *Conn) send(msg interface{}) error {
 		return errors.New("use of closed connection")
 	}
 
-	if err := c.ws.SetWriteDeadline(time.Now().Add(c.deadline)); err != nil {
-		return err
-	}
-
 	return websocket.JSON.Send(c.ws, msg)
 }
 
@@ -148,19 +150,17 @@ func (c *Conn) receive(msg *message) error {
 		return errors.New("use of closed connection")
 	}
 
-	if err := c.ws.SetReadDeadline(time.Now().Add(c.deadline)); err != nil {
-		return err
-	}
-
 	return websocket.JSON.Receive(c.ws, &msg)
 }
 
-// UseConn reuses an established websocket.Conn.
-// This function blocks and does not return until the connection is closed by another goroutine.
-func (c *Conn) useConn(ws *websocket.Conn) {
+// Reuse an established websocket.Conn.
+func (c *Conn) setConn(ws *websocket.Conn) error {
 	c.ws = ws
 	c.connected.Store(true)
-	c.startReceive()
+	if err := ws.SetDeadline(time.Now().Add(c.deadline)); err != nil {
+		return fmt.Errorf("conn: error while setting websocket connection deadline: %v", err)
+	}
+	return nil
 }
 
 // startReceive starts receiving messages. This method blocks and does not return until the connection is closed.

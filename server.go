@@ -32,6 +32,7 @@ type Server struct {
 }
 
 // NewServer creates a new Neptulon server.
+// addr should be formatted as host:port (i.e. 127.0.0.1:3000)
 func NewServer(addr string) *Server {
 	return &Server{
 		addr:           addr,
@@ -174,7 +175,8 @@ func (s *Server) wsConnHandler(ws *websocket.Conn) {
 	log.Printf("server: client connected %v: %v", c.ID, ws.RemoteAddr())
 
 	s.conns.Set(c.ID, c)
-	c.useConn(ws)
+	c.setConn(ws)
+	c.startReceive()
 	s.conns.Delete(c.ID)
 	s.disconnHandler(c)
 }

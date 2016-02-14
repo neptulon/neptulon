@@ -42,9 +42,9 @@ func HMAC(password string) func(ctx *neptulon.ReqCtx) error {
 			return fmt.Errorf("middleware: jwt: invalid JWT authentication attempt: %v: %v: %v", err, ctx.Conn.RemoteAddr(), t.Token)
 		}
 
-		authenticated = true
 		userID := jt.Claims["userid"].(string)
 		ctx.Conn.Session.Set("userid", userID)
+		authenticated = true
 		log.Printf("middleware: jwt: client authenticated. user: %v, conn: %v, ip: %v", userID, ctx.Conn.ID, ctx.Conn.RemoteAddr())
 		return ctx.Next()
 	}
