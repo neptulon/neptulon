@@ -77,6 +77,7 @@ func newResCtx(conn *Conn, id string, result json.RawMessage, err *resError) *Re
 		Conn:   conn,
 		ID:     id,
 		result: result,
+		err:    err,
 	}
 }
 
