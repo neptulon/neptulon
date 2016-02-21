@@ -65,7 +65,7 @@ func TestExternalClient(t *testing.T) {
 	defer sh.ListenAndServe().CloseWait()
 
 	if *ext {
-		t.Log("Starter server waiting for external client integration test since.")
+		t.Log("Started server and waiting for external client integration test since -ext flag is provided.")
 		wg.Wait()
 		return
 	}
