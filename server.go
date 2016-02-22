@@ -34,11 +34,13 @@ type Server struct {
 // NewServer creates a new Neptulon server.
 // addr should be formatted as host:port (i.e. 127.0.0.1:3000)
 func NewServer(addr string) *Server {
-	return &Server{
+	s := &Server{
 		addr:           addr,
 		conns:          cmap.New(),
 		disconnHandler: func(c *Conn) {},
 	}
+	s.running.Store(false)
+	return s
 }
 
 // UseTLS enables Transport Layer Security for the connections.
@@ -138,6 +140,9 @@ func (s *Server) SendRequestArr(connID string, method string, resHandler func(ct
 
 // Close closes the network listener and the active connections.
 func (s *Server) Close() error {
+	if !s.running.Load().(bool) {
+		return nil
+	}
 	s.running.Store(false)
 	err := s.listener.Close()
 
