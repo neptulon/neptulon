@@ -13,10 +13,7 @@ func Logger(ctx *neptulon.ReqCtx) error {
 		return err
 	}
 
-	if err := ctx.Next(); err != nil {
-		return err
-	}
-
+	err := ctx.Next()
 	log.Printf("middleware: logger: %v: %v, in: \"%v\", out: \"%v\"", ctx.ID, ctx.Method, v, ctx.Res)
-	return nil
+	return err
 }
