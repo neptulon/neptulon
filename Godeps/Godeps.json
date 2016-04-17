@@ -1,0 +1,37 @@
+{
+	"ImportPath": "github.com/neptulon/neptulon",
+	"GoVersion": "go1.6",
+	"GodepVersion": "v61",
+	"Packages": [
+		"./..."
+	],
+	"Deps": [
+		{
+			"ImportPath": "github.com/dgrijalva/jwt-go",
+			"Comment": "v2.6.0",
+			"Rev": "a2c85815a77d0f951e33ba4db5ae93629a1530af"
+		},
+		{
+			"ImportPath": "github.com/neptulon/ca",
+			"Rev": "08b49b9f991a32e7742858df47ddf174e19399dc"
+		},
+		{
+			"ImportPath": "github.com/neptulon/cmap",
+			"Comment": "v1.0",
+			"Rev": "ca60eae9c83a8c6696b3f4af3e6bac4cc844d0b4"
+		},
+		{
+			"ImportPath": "github.com/neptulon/randstr",
+			"Rev": "8bb0baac64e8d93b7c5bfcbe94b19e06ee23df3e"
+		},
+		{
+			"ImportPath": "github.com/neptulon/shortid",
+			"Comment": "v1.0",
+			"Rev": "6ef2893210b0b9eafa063ed4c1868d478163ca73"
+		},
+		{
+			"ImportPath": "golang.org/x/net/websocket",
+			"Rev": "fb93926129b8ec0056f2f458b1f519654814edf0"
+		}
+	]
+}
