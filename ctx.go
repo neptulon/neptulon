@@ -84,6 +84,7 @@ func newResCtx(conn *Conn, id string, result json.RawMessage, err *resError) *Re
 // Result reads response result data into given object.
 // Object should be passed by reference.
 func (ctx *ResCtx) Result(v interface{}) error {
+	// todo: check if response is error first
 	if ctx.result != nil {
 		if err := json.Unmarshal(ctx.result, v); err != nil {
 			return fmt.Errorf("ctx: cannot deserialize response result: %v", err)
@@ -91,4 +92,9 @@ func (ctx *ResCtx) Result(v interface{}) error {
 	}
 
 	return nil
+}
+
+//
+func (ctx *ResCtx) Error(v interface{}) (code int, message string, err error) {
+	return 0, "", nil
 }
