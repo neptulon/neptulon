@@ -66,7 +66,6 @@ func TestEcho(t *testing.T) {
 	defer sh.ListenAndServe().CloseWait()
 
 	ch := sh.GetConnHelper()
-	ch.Conn.MiddlewareFunc(middleware.Logger)
 	defer ch.Connect().CloseWait()
 
 	m := "Hello!"
@@ -96,6 +95,7 @@ func TestTLS(t *testing.T) {
 
 func TestError(t *testing.T) {
 	sh := NewServerHelper(t)
+	sh.Server.MiddlewareFunc(middleware.Logger)
 	sh.Server.MiddlewareFunc(func(ctx *neptulon.ReqCtx) error {
 		ctx.Err = &neptulon.ResError{
 			Code:    1234,
@@ -107,7 +107,6 @@ func TestError(t *testing.T) {
 	defer sh.ListenAndServe().CloseWait()
 
 	ch := sh.GetConnHelper()
-	ch.Conn.MiddlewareFunc(middleware.Logger)
 	defer ch.Connect().CloseWait()
 
 	ch.SendRequest("testerror", nil, func(ctx *neptulon.ResCtx) error {
