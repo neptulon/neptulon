@@ -13,7 +13,8 @@
 		},
 		{
 			"ImportPath": "github.com/neptulon/ca",
-			"Rev": "08b49b9f991a32e7742858df47ddf174e19399dc"
+			"Comment": "v1.0",
+			"Rev": "0c1ac1eda71a770d867f1a497287c00eff48ab37"
 		},
 		{
 			"ImportPath": "github.com/neptulon/cmap",
@@ -22,7 +23,8 @@
 		},
 		{
 			"ImportPath": "github.com/neptulon/randstr",
-			"Rev": "8bb0baac64e8d93b7c5bfcbe94b19e06ee23df3e"
+			"Comment": "v1.0",
+			"Rev": "65f7ef0d03a66fd4488619a5cc0299dc1bbeffb9"
 		},
 		{
 			"ImportPath": "github.com/neptulon/shortid",
@@ -31,7 +33,7 @@
 		},
 		{
 			"ImportPath": "golang.org/x/net/websocket",
-			"Rev": "fb93926129b8ec0056f2f458b1f519654814edf0"
+			"Rev": "b797637b7aeeed133049c7281bfa31dcc9ca42d6"
 		}
 	]
 }
