@@ -101,14 +101,14 @@ func (ctx *ResCtx) Result(v interface{}) error {
 	if !ctx.Success {
 		return errors.New("ctx: cannot read result data since server returned an error")
 	}
-
-	if ctx.result != nil {
-		if err := json.Unmarshal(ctx.result, v); err != nil {
-			return fmt.Errorf("ctx: cannot deserialize response result: %v", err)
-		}
+	if ctx.result == nil {
+		return errors.New("ctx: server did not return any response data")
 	}
 
-	return errors.New("ctx: server did not return any response data")
+	if err := json.Unmarshal(ctx.result, v); err != nil {
+		return fmt.Errorf("ctx: cannot deserialize response result: %v", err)
+	}
+	return nil
 }
 
 // ErrorData reads the error response data into given object.
@@ -117,12 +117,12 @@ func (ctx *ResCtx) ErrorData(v interface{}) error {
 	if ctx.Success {
 		return errors.New("ctx: cannot read error data since server returned a success response")
 	}
-
-	if ctx.errorData != nil {
-		if err := json.Unmarshal(ctx.errorData, v); err != nil {
-			return fmt.Errorf("ctx: cannot deserialize error data: %v", err)
-		}
+	if ctx.errorData == nil {
+		return errors.New("ctx: server did not return any error data")
 	}
 
-	return errors.New("ctx: server did not return any error data")
+	if err := json.Unmarshal(ctx.errorData, v); err != nil {
+		return fmt.Errorf("ctx: cannot deserialize error data: %v", err)
+	}
+	return nil
 }
