@@ -14,6 +14,6 @@ func Logger(ctx *neptulon.ReqCtx) error {
 	}
 
 	err := ctx.Next()
-	log.Printf("middleware: logger: %v: %v, in: \"%v\", out: \"%v\"", ctx.ID, ctx.Method, v, ctx.Res)
+	log.Printf("mw: logger: %v: %v, in: \"%v\", out: \"%v\"", ctx.ID, ctx.Method, v, ctx.Res)
 	return err
 }

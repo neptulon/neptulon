@@ -93,3 +93,25 @@ func TestBidirectional(t *testing.T) {
 func TestTLS(t *testing.T) {
 	// todo: ...
 }
+
+func TestError(t *testing.T) {
+	sh := NewServerHelper(t)
+	sh.Server.MiddlewareFunc(func(ctx *neptulon.ReqCtx) error {
+		ctx.Err = &neptulon.ResError{
+			Code:    1234,
+			Message: "much error",
+			Data:    map[string]string{"keykey": "valuevalue"},
+		}
+		return ctx.Next()
+	})
+	defer sh.ListenAndServe().CloseWait()
+
+	ch := sh.GetConnHelper()
+	ch.Conn.MiddlewareFunc(middleware.Logger)
+	defer ch.Connect().CloseWait()
+
+	ch.SendRequest("testerror", nil, func(ctx *neptulon.ResCtx) error {
+
+		return nil
+	})
+}
