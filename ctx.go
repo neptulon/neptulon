@@ -2,6 +2,7 @@ package neptulon
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/neptulon/cmap"
@@ -66,35 +67,62 @@ func (ctx *ReqCtx) Next() error {
 type ResCtx struct {
 	Conn *Conn // Client connection.
 
-	ID string // Message ID.
+	ID           string // Message ID.
+	Success      bool   // If response is a success or error response.
+	ErrorCode    int    // Error code (if any).
+	ErrorMessage string // Error message (if any).
 
-	result json.RawMessage // result parameters
-	err    *resError       // response error (if any)
+	result    json.RawMessage // result parameters
+	errorData json.RawMessage // error data (if any)
 }
 
 func newResCtx(conn *Conn, id string, result json.RawMessage, err *resError) *ResCtx {
-	return &ResCtx{
+	r := ResCtx{
 		Conn:   conn,
 		ID:     id,
 		result: result,
-		err:    err,
 	}
+
+	if err == nil {
+		r.Success = true
+		return &r
+	}
+
+	r.Success = false
+	r.ErrorCode = err.Code
+	r.ErrorMessage = err.Message
+	r.errorData = err.Data
+	return &r
 }
 
 // Result reads response result data into given object.
 // Object should be passed by reference.
 func (ctx *ResCtx) Result(v interface{}) error {
-	// todo: check if response is error first
+	if !ctx.Success {
+		return errors.New("ctx: cannot read result data since server returned an error")
+	}
+
 	if ctx.result != nil {
 		if err := json.Unmarshal(ctx.result, v); err != nil {
 			return fmt.Errorf("ctx: cannot deserialize response result: %v", err)
 		}
 	}
 
-	return nil
+	return errors.New("ctx: server did not return any response data")
 }
 
-//
-func (ctx *ResCtx) Error(v interface{}) (code int, message string, err error) {
-	return 0, "", nil
+// ErrorData reads the error response data into given object.
+// Object should be passed by reference.
+func (ctx *ResCtx) ErrorData(v interface{}) error {
+	if ctx.Success {
+		return errors.New("ctx: cannot read error data since server returned a success response")
+	}
+
+	if ctx.errorData != nil {
+		if err := json.Unmarshal(ctx.errorData, v); err != nil {
+			return fmt.Errorf("ctx: cannot deserialize error data: %v", err)
+		}
+	}
+
+	return errors.New("ctx: server did not return any error data")
 }
