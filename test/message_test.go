@@ -66,7 +66,6 @@ func TestEcho(t *testing.T) {
 	defer sh.ListenAndServe().CloseWait()
 
 	ch := sh.GetConnHelper()
-	ch.Conn.MiddlewareFunc(middleware.Logger)
 	defer ch.Connect().CloseWait()
 
 	m := "Hello!"
@@ -92,4 +91,42 @@ func TestBidirectional(t *testing.T) {
 
 func TestTLS(t *testing.T) {
 	// todo: ...
+}
+
+func TestError(t *testing.T) {
+	sh := NewServerHelper(t)
+	sh.Server.MiddlewareFunc(middleware.Logger)
+	sh.Server.MiddlewareFunc(func(ctx *neptulon.ReqCtx) error {
+		ctx.Err = &neptulon.ResError{
+			Code:    1234,
+			Message: "much error",
+			Data:    map[string]string{"keykey": "valuevalue"},
+		}
+		return ctx.Next()
+	})
+	defer sh.ListenAndServe().CloseWait()
+
+	ch := sh.GetConnHelper()
+	defer ch.Connect().CloseWait()
+
+	ch.SendRequest("testerror", nil, func(ctx *neptulon.ResCtx) error {
+		var v map[string]string
+		if ctx.Success {
+			t.Error("expected to get error response")
+		}
+		if ctx.Result(&v) == nil {
+			t.Error("did not expect to get any result for expected error response")
+		}
+		if ctx.ErrorCode != 1234 {
+			t.Errorf("expected error code %v got %v", 1234, ctx.ErrorCode)
+		}
+		if ctx.ErrorMessage != "much error" {
+			t.Errorf("expected error message %v got %v", "much error", ctx.ErrorMessage)
+		}
+		if ctx.ErrorData(&v) != nil || v["keykey"] != "valuevalue" {
+			t.Errorf("expected error data %v got %v or errored during deserialization", "valuevalue", v["keykey"])
+		}
+
+		return nil
+	})
 }
