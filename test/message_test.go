@@ -127,6 +127,12 @@ func TestError(t *testing.T) {
 			t.Errorf("expected error data %v got %v or errored during deserialization", "valuevalue", v["keykey"])
 		}
 
+		// todo: make sure that conn is closed
+
 		return nil
 	})
+}
+
+func TestPanic(t *testing.T) {
+	// todo: panic from inside a req handler and make sure that server/client does not crash and conn is closed
 }
