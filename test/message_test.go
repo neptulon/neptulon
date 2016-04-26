@@ -110,6 +110,22 @@ func TestError(t *testing.T) {
 	defer ch.Connect().CloseWait()
 
 	ch.SendRequest("testerror", nil, func(ctx *neptulon.ResCtx) error {
+		var v map[string]string
+		if ctx.Success {
+			t.Error("expected to get error response")
+		}
+		if ctx.Result(&v) == nil {
+			t.Error("did not expect to get any result for expected error response")
+		}
+		if ctx.ErrorCode != 1234 {
+			t.Errorf("expected error code %v got %v", 1234, ctx.ErrorCode)
+		}
+		if ctx.ErrorMessage != "much error" {
+			t.Errorf("expected error message %v got %v", "much error", ctx.ErrorMessage)
+		}
+		if ctx.ErrorData(&v) != nil || v["keykey"] != "valuevalue" {
+			t.Errorf("expected error data %v got %v or errored during deserialization", "valuevalue", v["keykey"])
+		}
 
 		return nil
 	})
