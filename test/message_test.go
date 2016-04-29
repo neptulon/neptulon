@@ -127,7 +127,7 @@ func TestError(t *testing.T) {
 			t.Errorf("expected error data %v got %v or errored during deserialization", "valuevalue", v["keykey"])
 		}
 
-		// todo: make sure that conn is closed
+		// todo: verify that conn is closed
 
 		return nil
 	})

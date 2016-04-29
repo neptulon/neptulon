@@ -37,14 +37,15 @@ func newReqCtx(conn *Conn, id, method string, params json.RawMessage, mw []func(
 // Params reads request parameters into given object.
 // Object should be passed by reference.
 func (ctx *ReqCtx) Params(v interface{}) error {
-	if ctx.params != nil {
-		if err := json.Unmarshal(ctx.params, v); err != nil {
-			return fmt.Errorf("ctx: cannot deserialize request params: %v", err)
-		}
-		return nil
+	if ctx.params == nil {
+		return errors.New("ctx: request did not have any request parameters")
 	}
 
-	return errors.New("ctx: request did not have any request parameters")
+	if err := json.Unmarshal(ctx.params, v); err != nil {
+		return fmt.Errorf("ctx: cannot deserialize request params: %v", err)
+	}
+
+	return nil
 }
 
 // Next executes the next middleware in the middleware stack.
