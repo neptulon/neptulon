@@ -41,9 +41,10 @@ func (ctx *ReqCtx) Params(v interface{}) error {
 		if err := json.Unmarshal(ctx.params, v); err != nil {
 			return fmt.Errorf("ctx: cannot deserialize request params: %v", err)
 		}
+		return nil
 	}
 
-	return nil
+	return errors.New("ctx: request did not have any request parameters")
 }
 
 // Next executes the next middleware in the middleware stack.
