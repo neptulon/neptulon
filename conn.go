@@ -205,7 +205,7 @@ func (c *Conn) startReceive() {
 			go func() {
 				defer recoverAndLog(c, &c.wg)
 				if err := newReqCtx(c, m.ID, m.Method, m.Params, c.middleware).Next(); err != nil {
-					log.Printf("conn: error while handling request: %v", err)
+					log.Printf("ctx: request handler/middleware returned error: %v", err)
 					c.Close()
 				}
 			}()
