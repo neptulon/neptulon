@@ -206,6 +206,7 @@ func (c *Conn) startReceive() {
 				defer recoverAndLog(c, &c.wg)
 				if err := newReqCtx(c, m.ID, m.Method, m.Params, c.middleware).Next(); err != nil {
 					log.Printf("ctx: request handler/middleware returned error: %v", err)
+					// todo: we need to notify the user that an internal error occured here, or let that be handled by 'error' middleware?
 					c.Close()
 				}
 			}()
