@@ -77,10 +77,13 @@ func (sh *ServerHelper) ListenAndServe() *ServerHelper {
 		}
 	}()
 
-	time.Sleep(time.Millisecond) // give Accept() enough CPU cycles to initiate
-	if os.Getenv("TRAVIS") != "" || os.Getenv("CI") == "" {
-		time.Sleep(time.Millisecond * 15)
+	// give server enough time to initiate
+	if os.Getenv("TRAVIS") != "" || os.Getenv("CI") != "" {
+		time.Sleep(time.Millisecond * 25)
+	} else {
+		time.Sleep(time.Millisecond)
 	}
+
 	return sh
 }
 
@@ -98,8 +101,11 @@ func (sh *ServerHelper) CloseWait() {
 
 	sh.listenerWG.Wait()
 	sh.Server.Wait()
-	time.Sleep(time.Millisecond * 5)
-	if os.Getenv("TRAVIS") != "" || os.Getenv("CI") == "" {
+
+	// give connections enough time to disconnect properly
+	if os.Getenv("TRAVIS") != "" || os.Getenv("CI") != "" {
 		time.Sleep(time.Millisecond * 50)
+	} else {
+		time.Sleep(time.Millisecond * 5)
 	}
 }

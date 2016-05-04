@@ -83,8 +83,10 @@ func (ch *ConnHelper) CloseWait() {
 		ch.testing.Fatal("Failed to close connection:", err)
 	}
 	ch.Conn.Wait()
-	time.Sleep(time.Millisecond * 5)
-	if os.Getenv("TRAVIS") != "" || os.Getenv("CI") == "" {
+
+	if os.Getenv("TRAVIS") != "" || os.Getenv("CI") != "" {
 		time.Sleep(time.Millisecond * 50)
+	} else {
+		time.Sleep(time.Millisecond * 5)
 	}
 }
