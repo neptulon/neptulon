@@ -135,9 +135,18 @@ func (c *Conn) Close() error {
 }
 
 // Wait waits for all message/connection handler goroutines to exit.
-// Returns error if wait timeouts.
-func (c *Conn) Wait() {
-	c.wg.Wait()
+// Returns error if wait timeouts (in seconds).
+func (c *Conn) Wait(timeout int) error {
+	done := make(chan bool)
+
+	go func() { c.wg.Wait(); done <- true }()
+
+	select {
+	case <-done:
+		return nil
+	case <-time.After(time.Second * time.Duration(timeout)):
+		return errors.New("wait timed out")
+	}
 }
 
 // SendResponse sends a JSON-RPC response message through the connection.

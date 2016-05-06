@@ -85,9 +85,12 @@ func (ch *ConnHelper) SendRequestSync(method string, params interface{}, resHand
 // Waits till all the goroutines handling messages quit.
 func (ch *ConnHelper) CloseWait() {
 	if err := ch.Conn.Close(); err != nil {
-		ch.testing.Fatal("Failed to close connection:", err)
+		ch.testing.Fatal("failed to close connection:", err)
 	}
-	ch.Conn.Wait()
+
+	if err := ch.Conn.Wait(10); err != nil {
+		ch.testing.Fatal("message handler goroutine(s) didn't quit on time:", err)
+	}
 
 	if os.Getenv("TRAVIS") != "" || os.Getenv("CI") != "" {
 		time.Sleep(time.Millisecond * 50)
