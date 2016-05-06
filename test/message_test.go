@@ -59,14 +59,14 @@ func TestEchoWithoutTestHelpers(t *testing.T) {
 
 func TestEcho(t *testing.T) {
 	sh := NewServerHelper(t)
-	rout := middleware.NewRouter()
+	route := middleware.NewRouter()
 	sh.Server.MiddlewareFunc(middleware.Logger)
-	sh.Server.Middleware(rout)
-	rout.Request("echo", middleware.Echo)
+	sh.Server.Middleware(route)
+	route.Request("echo", middleware.Echo)
 	defer sh.ListenAndServe().CloseWait()
 
-	ch := sh.GetConnHelper()
-	defer ch.Connect().CloseWait()
+	ch := sh.GetConnHelper().Connect()
+	defer ch.CloseWait()
 
 	m := "Hello!"
 	ch.SendRequest("echo", echoMsg{Message: m}, func(ctx *neptulon.ResCtx) error {
@@ -106,8 +106,8 @@ func TestError(t *testing.T) {
 	})
 	defer sh.ListenAndServe().CloseWait()
 
-	ch := sh.GetConnHelper()
-	defer ch.Connect().CloseWait()
+	ch := sh.GetConnHelper().Connect()
+	defer ch.CloseWait()
 
 	ch.SendRequest("testerror", nil, func(ctx *neptulon.ResCtx) error {
 		var v map[string]string
