@@ -24,7 +24,7 @@ var (
 )
 
 func TestEchoWithoutTestHelpers(t *testing.T) {
-	s := neptulon.NewServer("127.0.0.1:3001")
+	s := neptulon.NewServer("127.0.0.1:3002")
 	go s.ListenAndServe()
 	time.Sleep(time.Millisecond * 30)
 	defer s.Close()
@@ -36,7 +36,7 @@ func TestEchoWithoutTestHelpers(t *testing.T) {
 	})
 
 	origin := "http://127.0.0.1"
-	url := "ws://127.0.0.1:3001"
+	url := "ws://127.0.0.1:3002"
 	ws, err := websocket.Dial(url, "", origin)
 	if err != nil {
 		t.Fatal(err)
