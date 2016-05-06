@@ -24,9 +24,9 @@ c, _ := neptulon.NewConn()
 c.Connect("ws://127.0.0.1:3000")
 c.SendRequest("echo", map[string]string{"message": "Hello!"}, func(ctx *neptulon.ResCtx) error {
 	var msg interface{}
-	ctx.Result(&msg)
+	err := ctx.Result(&msg)
 	fmt.Println("Server sent:", msg)
-	return nil
+	return err
 })
 ```
 
