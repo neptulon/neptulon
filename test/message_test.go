@@ -69,7 +69,7 @@ func TestEcho(t *testing.T) {
 	defer ch.CloseWait()
 
 	m := "Hello!"
-	ch.SendRequest("echo", echoMsg{Message: m}, func(ctx *neptulon.ResCtx) error {
+	ch.SendRequestSync("echo", echoMsg{Message: m}, func(ctx *neptulon.ResCtx) error {
 		var msg echoMsg
 		if err := ctx.Result(&msg); err != nil {
 			t.Fatal(err)
@@ -109,7 +109,7 @@ func TestError(t *testing.T) {
 	ch := sh.GetConnHelper().Connect()
 	defer ch.CloseWait()
 
-	ch.SendRequest("testerror", nil, func(ctx *neptulon.ResCtx) error {
+	ch.SendRequestSync("testerror", nil, func(ctx *neptulon.ResCtx) error {
 		var v map[string]string
 		if ctx.Success {
 			t.Error("expected to get error response")

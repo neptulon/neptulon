@@ -83,7 +83,7 @@ func TestExternalClient(t *testing.T) {
 
 	// handle 'echo' request and send 'close' request upon echo response
 	mc := "Hello from Neptulon Go client!"
-	ch.SendRequest("echo", echoMsg{Message: mc}, func(ctx *neptulon.ResCtx) error {
+	ch.SendRequestSync("echo", echoMsg{Message: mc}, func(ctx *neptulon.ResCtx) error {
 		var msg echoMsg
 		if err := ctx.Result(&msg); err != nil {
 			t.Fatal(err)
@@ -95,7 +95,7 @@ func TestExternalClient(t *testing.T) {
 
 		// send close request after getting our echo message back
 		mb := "Thanks for echoing! Over and out."
-		ch.SendRequest("close", echoMsg{Message: mb}, func(ctx *neptulon.ResCtx) error {
+		ch.SendRequestSync("close", echoMsg{Message: mb}, func(ctx *neptulon.ResCtx) error {
 			var msg echoMsg
 			if err := ctx.Result(&msg); err != nil {
 				t.Fatal(err)

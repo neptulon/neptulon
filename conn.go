@@ -135,6 +135,7 @@ func (c *Conn) Close() error {
 }
 
 // Wait waits for all message/connection handler goroutines to exit.
+// Returns error if wait timeouts.
 func (c *Conn) Wait() {
 	c.wg.Wait()
 }
