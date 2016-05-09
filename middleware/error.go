@@ -25,12 +25,16 @@ func Error(ctx *neptulon.ReqCtx) error {
 		log.Printf("mw: error: panic handling response: %v\nstack trace: %s", err, buf)
 	}
 
-	if errored && ctx.Err == nil {
-		ctx.Err = &neptulon.ResError{
-			Code:    500,
-			Message: "Internal server error.",
+	if errored {
+		if ctx.Err == nil {
+			ctx.Err = &neptulon.ResError{
+				Code:    500,
+				Message: "Internal server error.",
+			}
 		}
+
+		return ctx.Next()
 	}
 
-	return ctx.Next()
+	return nil
 }
