@@ -3,7 +3,6 @@ package neptulon_test
 import (
 	"fmt"
 	"log"
-	"sync"
 	"time"
 
 	"github.com/neptulon/neptulon"
@@ -28,8 +27,9 @@ func Example() {
 		return ctx.Next()
 	})
 	go s.ListenAndServe()
-	time.Sleep(time.Millisecond * 50) // let server goroutine to warm up
 	defer s.Close()
+
+	time.Sleep(time.Millisecond * 50) // let server goroutine to warm up
 
 	// connect to the server and send a message
 	c, err := neptulon.NewConn()
@@ -41,10 +41,7 @@ func Example() {
 	}
 	defer c.Close()
 
-	var wg sync.WaitGroup
-	wg.Add(1)
 	_, err = c.SendRequest("echo", SampleMsg{Message: "Hello!"}, func(ctx *neptulon.ResCtx) error {
-		wg.Done()
 		var msg SampleMsg
 		if err := ctx.Result(&msg); err != nil {
 			return err
@@ -57,6 +54,7 @@ func Example() {
 		log.Fatal(err)
 	}
 
-	wg.Wait()
+	time.Sleep(time.Millisecond * 50) // wait to get an answer
+
 	// Output: Server says: Hello!
 }

@@ -135,8 +135,18 @@ func (c *Conn) Close() error {
 }
 
 // Wait waits for all message/connection handler goroutines to exit.
-func (c *Conn) Wait() {
-	c.wg.Wait()
+// Returns error if wait timeouts (in seconds).
+func (c *Conn) Wait(timeout int) error {
+	done := make(chan bool)
+
+	go func() { c.wg.Wait(); done <- true }()
+
+	select {
+	case <-done:
+		return nil
+	case <-time.After(time.Second * time.Duration(timeout)):
+		return errors.New("wait timed out")
+	}
 }
 
 // SendResponse sends a JSON-RPC response message through the connection.
@@ -245,6 +255,6 @@ func recoverAndLog(c *Conn, wg *sync.WaitGroup) {
 		const size = 64 << 10
 		buf := make([]byte, size)
 		buf = buf[:runtime.Stack(buf, false)]
-		log.Printf("conn: panic handling response %v: %v\n%s", c.RemoteAddr(), err, buf)
+		log.Printf("conn: panic handling response %v: %v\nstack trace: %s", c.RemoteAddr(), err, buf)
 	}
 }

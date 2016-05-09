@@ -3,7 +3,6 @@ package test
 import (
 	"net"
 	"os"
-	"sync"
 	"testing"
 	"time"
 
@@ -17,7 +16,6 @@ type ConnHelper struct {
 
 	testing    *testing.T
 	serverAddr string
-	resWG      sync.WaitGroup // to be able to blocking wait for pending responses
 }
 
 // NewConnHelper creates a new client helper object.
@@ -59,17 +57,26 @@ func (ch *ConnHelper) Connect() *ConnHelper {
 	return ch
 }
 
-// SendRequest sends a JSON-RPC request through the client connection with an auto generated request ID.
+// SendRequestSync sends a JSON-RPC request through the client connection with an auto generated request ID.
 // resHandler is called when a response is returned.
-func (ch *ConnHelper) SendRequest(method string, params interface{}, resHandler func(ctx *neptulon.ResCtx) error) *ConnHelper {
-	ch.resWG.Add(1)
+// This function is synchronous and blocking.
+func (ch *ConnHelper) SendRequestSync(method string, params interface{}, resHandler func(ctx *neptulon.ResCtx) error) *ConnHelper {
+	gotRes := make(chan bool)
+
 	_, err := ch.Conn.SendRequest(method, params, func(ctx *neptulon.ResCtx) error {
-		defer ch.resWG.Done()
-		return resHandler(ctx)
+		err := resHandler(ctx)
+		gotRes <- true
+		return err
 	})
 
 	if err != nil {
 		ch.testing.Fatal("Failed to send request:", err)
+	}
+
+	select {
+	case <-gotRes:
+	case <-time.After(time.Second * 3):
+		ch.testing.Fatal("did not get a response in time")
 	}
 
 	return ch
@@ -78,13 +85,17 @@ func (ch *ConnHelper) SendRequest(method string, params interface{}, resHandler 
 // CloseWait closes a connection.
 // Waits till all the goroutines handling messages quit.
 func (ch *ConnHelper) CloseWait() {
-	ch.resWG.Wait()
 	if err := ch.Conn.Close(); err != nil {
-		ch.testing.Fatal("Failed to close connection:", err)
+		ch.testing.Fatal("failed to close connection:", err)
 	}
-	ch.Conn.Wait()
-	time.Sleep(time.Millisecond * 5)
-	if os.Getenv("TRAVIS") != "" || os.Getenv("CI") == "" {
+
+	if err := ch.Conn.Wait(10); err != nil {
+		ch.testing.Fatal("message handler goroutine(s) didn't quit on time:", err)
+	}
+
+	if os.Getenv("TRAVIS") != "" || os.Getenv("CI") != "" {
 		time.Sleep(time.Millisecond * 50)
+	} else {
+		time.Sleep(time.Millisecond * 5)
 	}
 }

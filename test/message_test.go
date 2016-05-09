@@ -24,7 +24,7 @@ var (
 )
 
 func TestEchoWithoutTestHelpers(t *testing.T) {
-	s := neptulon.NewServer("127.0.0.1:3001")
+	s := neptulon.NewServer("127.0.0.1:3002")
 	go s.ListenAndServe()
 	time.Sleep(time.Millisecond * 30)
 	defer s.Close()
@@ -36,7 +36,7 @@ func TestEchoWithoutTestHelpers(t *testing.T) {
 	})
 
 	origin := "http://127.0.0.1"
-	url := "ws://127.0.0.1:3001"
+	url := "ws://127.0.0.1:3002"
 	ws, err := websocket.Dial(url, "", origin)
 	if err != nil {
 		t.Fatal(err)
@@ -59,17 +59,17 @@ func TestEchoWithoutTestHelpers(t *testing.T) {
 
 func TestEcho(t *testing.T) {
 	sh := NewServerHelper(t)
-	rout := middleware.NewRouter()
+	route := middleware.NewRouter()
 	sh.Server.MiddlewareFunc(middleware.Logger)
-	sh.Server.Middleware(rout)
-	rout.Request("echo", middleware.Echo)
+	sh.Server.Middleware(route)
+	route.Request("echo", middleware.Echo)
 	defer sh.ListenAndServe().CloseWait()
 
-	ch := sh.GetConnHelper()
-	defer ch.Connect().CloseWait()
+	ch := sh.GetConnHelper().Connect()
+	defer ch.CloseWait()
 
 	m := "Hello!"
-	ch.SendRequest("echo", echoMsg{Message: m}, func(ctx *neptulon.ResCtx) error {
+	ch.SendRequestSync("echo", echoMsg{Message: m}, func(ctx *neptulon.ResCtx) error {
 		var msg echoMsg
 		if err := ctx.Result(&msg); err != nil {
 			t.Fatal(err)
@@ -106,10 +106,10 @@ func TestError(t *testing.T) {
 	})
 	defer sh.ListenAndServe().CloseWait()
 
-	ch := sh.GetConnHelper()
-	defer ch.Connect().CloseWait()
+	ch := sh.GetConnHelper().Connect()
+	defer ch.CloseWait()
 
-	ch.SendRequest("testerror", nil, func(ctx *neptulon.ResCtx) error {
+	ch.SendRequestSync("testerror", nil, func(ctx *neptulon.ResCtx) error {
 		var v map[string]string
 		if ctx.Success {
 			t.Error("expected to get error response")
