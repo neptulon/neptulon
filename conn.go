@@ -256,6 +256,6 @@ func recoverAndLog(c *Conn, wg *sync.WaitGroup) {
 		const size = 64 << 10
 		buf := make([]byte, size)
 		buf = buf[:runtime.Stack(buf, false)]
-		log.Printf("conn: panic handling response %v: %v\n%s", c.RemoteAddr(), err, buf)
+		log.Printf("conn: panic handling response %v: %v\nstack trace: %s", c.RemoteAddr(), err, buf)
 	}
 }

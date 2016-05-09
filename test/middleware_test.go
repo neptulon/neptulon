@@ -1,7 +1,9 @@
 package test
 
 import (
+	"log"
 	"testing"
+	"time"
 
 	"github.com/neptulon/neptulon"
 	"github.com/neptulon/neptulon/middleware"
@@ -19,16 +21,19 @@ func TestMiddlewarePanic(t *testing.T) {
 	ch := sh.GetConnHelper().Connect()
 	defer ch.CloseWait()
 
-	// ch.SendRequest("echo", echoMsg{Message: m}, func(ctx *neptulon.ResCtx) error {
-	// 	var msg echoMsg
-	// 	if err := ctx.Result(&msg); err != nil {
-	// 		t.Fatal(err)
-	// 	}
-	// 	if msg.Message != m {
-	// 		t.Fatalf("expected: %v got: %v", m, msg.Message)
-	// 	}
-	// 	return nil
-	// })
+	gotRes := make(chan bool)
+	ch.Conn.SendRequest("echo", echoMsg{Message: "just testing"}, func(ctx *neptulon.ResCtx) error {
+		gotRes <- true
+		return nil
+	})
+
+	select {
+	case <-gotRes:
+		log.Fatal("expected no response, got one")
+	case <-time.After(time.Millisecond * 25):
+	}
+
+	// todo: verify that the server is still up and functional
 }
 
 func TestMiddlewareErrorReturn(t *testing.T) {
