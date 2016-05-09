@@ -32,5 +32,5 @@ func Error(ctx *neptulon.ReqCtx) error {
 		}
 	}
 
-	return nil
+	return ctx.Next()
 }

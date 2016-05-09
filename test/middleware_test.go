@@ -16,7 +16,6 @@ func TestMiddlewarePanics(t *testing.T) {
 	sh.Server.MiddlewareFunc(func(ctx *neptulon.ReqCtx) error {
 		panic("much panic")
 	})
-	sh.Server.MiddlewareFunc(middleware.Echo)
 	defer sh.ListenAndServe().CloseWait()
 
 	ch := sh.GetConnHelper().Connect()
@@ -44,7 +43,6 @@ func TestMiddlewareRetursError(t *testing.T) {
 	sh.Server.MiddlewareFunc(func(ctx *neptulon.ReqCtx) error {
 		return errors.New("much error")
 	})
-	sh.Server.MiddlewareFunc(middleware.Echo)
 	defer sh.ListenAndServe().CloseWait()
 
 	ch := sh.GetConnHelper().Connect()
@@ -70,7 +68,6 @@ func TestErrorHandlerMiddleware(t *testing.T) {
 	sh.Server.MiddlewareFunc(func(ctx *neptulon.ReqCtx) error {
 		return errors.New("much error")
 	})
-	sh.Server.MiddlewareFunc(middleware.Echo)
 	defer sh.ListenAndServe().CloseWait()
 
 	ch := sh.GetConnHelper().Connect()
