@@ -10,7 +10,7 @@ import (
 	"github.com/neptulon/neptulon/middleware"
 )
 
-func TestMiddlewarePanic(t *testing.T) {
+func TestMiddlewarePanics(t *testing.T) {
 	sh := NewServerHelper(t)
 	sh.Server.MiddlewareFunc(middleware.Logger)
 	sh.Server.MiddlewareFunc(func(ctx *neptulon.ReqCtx) error {
@@ -38,7 +38,7 @@ func TestMiddlewarePanic(t *testing.T) {
 	// todo: verify that the server is still up and functional
 }
 
-func TestMiddlewareErrorReturn(t *testing.T) {
+func TestMiddlewareRetursError(t *testing.T) {
 	sh := NewServerHelper(t)
 	sh.Server.MiddlewareFunc(middleware.Logger)
 	sh.Server.MiddlewareFunc(func(ctx *neptulon.ReqCtx) error {
@@ -52,16 +52,13 @@ func TestMiddlewareErrorReturn(t *testing.T) {
 
 	gotRes := make(chan bool)
 	ch.Conn.SendRequest("echo", echoMsg{Message: "just testing"}, func(ctx *neptulon.ResCtx) error {
-		if ctx.ErrorMessage == "" || ctx.ErrorCode == 0 {
-			t.Fatal("expected error response with message, got none")
-		}
 		gotRes <- true
 		return nil
 	})
 
 	select {
 	case <-gotRes:
-	case <-time.After(time.Millisecond * 100):
-		log.Fatal("expected error response, got none")
+		log.Fatal("expected no response, got one")
+	case <-time.After(time.Millisecond * 25):
 	}
 }
