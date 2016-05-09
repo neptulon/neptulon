@@ -64,8 +64,9 @@ func (ch *ConnHelper) SendRequestSync(method string, params interface{}, resHand
 	gotRes := make(chan bool)
 
 	_, err := ch.Conn.SendRequest(method, params, func(ctx *neptulon.ResCtx) error {
-		defer func() { gotRes <- true }()
-		return resHandler(ctx)
+		err := resHandler(ctx)
+		gotRes <- true
+		return err
 	})
 
 	if err != nil {

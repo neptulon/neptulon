@@ -62,3 +62,21 @@ func TestMiddlewareRetursError(t *testing.T) {
 	case <-time.After(time.Millisecond * 25):
 	}
 }
+
+func TestErrorHandlerMiddleware(t *testing.T) {
+	sh := NewServerHelper(t)
+	sh.Server.MiddlewareFunc(middleware.Logger)
+	sh.Server.MiddlewareFunc(middleware.Error)
+	sh.Server.MiddlewareFunc(func(ctx *neptulon.ReqCtx) error {
+		return errors.New("much error")
+	})
+	sh.Server.MiddlewareFunc(middleware.Echo)
+	defer sh.ListenAndServe().CloseWait()
+
+	ch := sh.GetConnHelper().Connect()
+	defer ch.CloseWait()
+
+	ch.SendRequestSync("echo", echoMsg{Message: "just testing"}, func(ctx *neptulon.ResCtx) error {
+		return nil
+	})
+}
