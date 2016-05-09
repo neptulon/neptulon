@@ -30,10 +30,10 @@ func TestMiddlewarePanics(t *testing.T) {
 	select {
 	case <-gotRes:
 		log.Fatal("expected no response, got one")
-	case <-time.After(time.Millisecond * 25):
+	case <-time.After(time.Millisecond * 50):
 	}
 
-	// todo: rather than waiting 25 millisecs, add a Conn.Disconnected handler and check that it is called
+	// todo: rather than waiting 50 millisecs, add a Conn.Disconnected handler and check that it is called
 	// todo: verify that the server is still up and functional
 }
 
@@ -57,7 +57,7 @@ func TestMiddlewareRetursError(t *testing.T) {
 	select {
 	case <-gotRes:
 		log.Fatal("expected no response, got one")
-	case <-time.After(time.Millisecond * 25):
+	case <-time.After(time.Millisecond * 50):
 	}
 }
 
