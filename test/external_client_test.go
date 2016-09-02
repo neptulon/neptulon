@@ -9,7 +9,7 @@ import (
 	"github.com/neptulon/neptulon/middleware"
 )
 
-var ext = flag.Bool("ext", false, "Run external client test case.")
+var extFlog = flag.Bool("ext", false, "Run external client test case.")
 
 // Helper method for testing client implementations in other languages.
 // Flow of events for this function is:
@@ -64,7 +64,7 @@ func TestExternalClient(t *testing.T) {
 
 	defer sh.ListenAndServe().CloseWait()
 
-	if *ext {
+	if *extFlog {
 		t.Log("Started server and waiting for external client integration test since -ext flag is provided.")
 		wg.Wait()
 		return
