@@ -86,7 +86,7 @@ func TestCustLog(t *testing.T) {
 
 func TestPrefix(t *testing.T) {
 	out := captureOutput(func() {
-		err := Logger(&neptulon.ReqCtx{Session: cmap.New()})
+		err := LoggerWithPrefix("test123")(&neptulon.ReqCtx{Session: cmap.New()})
 		if err != nil {
 			t.Fatal("didn't expect error from logger")
 		}
