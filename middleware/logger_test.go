@@ -83,3 +83,16 @@ func TestCustLog(t *testing.T) {
 		log.Fatalf("malformed log output: %v", out)
 	}
 }
+
+func TestPrefix(t *testing.T) {
+	out := captureOutput(func() {
+		err := LoggerWithPrefix("test123")(&neptulon.ReqCtx{Session: cmap.New()})
+		if err != nil {
+			t.Fatal("didn't expect error from logger")
+		}
+	})
+
+	if !strings.Contains(out, "test123") {
+		log.Fatalf("malformed log output: %v", out)
+	}
+}
