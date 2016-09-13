@@ -128,7 +128,7 @@ func (s *Server) SendRequest(connID string, method string, params interface{}, r
 	if conn, ok := s.conns.GetOk(connID); ok {
 		reqID, err = conn.(*Conn).SendRequest(method, params, resHandler)
 		// todo: only log in debug mode?
-		log.Printf("server: send-request: connID: %v, reqID: %v, method: %v, params: %v, err (if any): %v", connID, reqID, method, params, err)
+		log.Printf("server: send-request: connID: %v, reqID: %v, method: %v, params: %#v, err (if any): %v", connID, reqID, method, params, err)
 		return
 	}
 
