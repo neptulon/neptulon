@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
+	"expvar"
 	"fmt"
 	"log"
 	"net"
@@ -18,6 +19,8 @@ import (
 
 	"golang.org/x/net/websocket"
 )
+
+var connsCounter = expvar.NewInt("conns")
 
 // Server is a Neptulon server.
 type Server struct {
@@ -183,8 +186,10 @@ func (s *Server) wsConnHandler(ws *websocket.Conn) {
 	log.Printf("server: client connected %v: %v", c.ID, ws.RemoteAddr())
 
 	s.conns.Set(c.ID, c)
+	connsCounter.Add(1)
 	c.setConn(ws)
 	c.startReceive()
 	s.conns.Delete(c.ID)
+	connsCounter.Add(-1)
 	s.disconnHandler(c)
 }
