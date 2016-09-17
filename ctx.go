@@ -13,7 +13,7 @@ type ReqCtx struct {
 	Conn    *Conn      // Client connection.
 	Session *cmap.CMap // Session is a data store for storing arbitrary data within this context to communicate with other middleware handling this message.
 
-	ID     string      // Message ID.
+	ID     string      // Request ID.
 	Method string      // Called method.
 	Res    interface{} // Response to be returned.
 	Err    *ResError   // Error to be returned.
